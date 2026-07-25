@@ -16,6 +16,8 @@ Local-first VS Code extension for scanning, classifying and safely organizing SQ
 code --install-extension sql-organizer-0.1.5.vsix
 ```
 
+See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuration, review, Apply, and rollback instructions.
+
 ## Safety
 
 Only approved actions are renamed through VS Code's filesystem API. Apply rechecks source hashes, destination containment, symlinks, conflicts, and optional Git cleanliness. Full details are in [docs/SECURITY.md](docs/SECURITY.md).
