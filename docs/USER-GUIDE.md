@@ -7,20 +7,20 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 1. Install the VSIX from a terminal:
 
    ```bash
-   code --install-extension sql-organizer-0.1.9.vsix
+   code --install-extension sql-organizer-0.2.0.vsix
    ```
 
 2. Open the workspace folder that contains the SQL files. In a multi-root workspace, run **SQL Organizer: Select Workspace Folder** and choose the SQL library to operate on.
 
 3. Open the Command Palette (`Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux) and run **SQL Organizer: Configure**. Add an endpoint profile, enter its Base URL, select its protocol, add one model ID per line, enter the API key, then click **Save**. Use **Test Connection** before scanning. Endpoint profiles are global to VS Code.
 
-4. Run **SQL Organizer: Scan and Create Plan**. This single command performs local SQL analysis, extracts metadata, detects duplicate candidates, sends redacted SQL for classification, generates a dry-run plan, report, and index, then opens the Review panel. It supports cancellation, retries transient failures, and saves progress after each item. It never modifies SQL files.
+4. Run **SQL Organizer: Scan and Create Plan**. This single command performs local SQL analysis, discovers existing categories, safely separates independent top-level statements, detects duplicate candidates, sends redacted units for classification, generates a dry-run plan, report, and index, then opens the Review panel. It supports cancellation, retries transient failures, and saves progress after each unit. It never modifies SQL files.
 
    The VS Code progress notification shows the active phase and each classification as `current/total`. A cancelled run keeps completed work. If scanning, endpoint setup, or plan generation fails, SQL Organizer shows an actionable error notification and writes sanitized details to the **SQL Organizer** Output channel. Partial classification failures are shown as a warning and remain visible in the Issues view.
 
-5. Review every proposed action. Use filters for status, category, operation, risk, low confidence, and exact duplicates. Open details to inspect metadata and risk notes; edit the category, operation folder, filename, destination, or review note as needed. Approve or reject each action explicitly.
+5. Review every proposed action. The Review panel identifies whole-file moves and statement extractions, including the source range, proposed destination, primary and related categories, risk, and new category proposals. A query that joins several tables remains one unit; only independent statements are extracted. Approve or reject each action explicitly.
 
-6. Select **Apply approved plan** in the Review panel. VS Code asks for a second confirmation. Only approved, conflict-free actions are moved after source-hash, destination, path, symlink, collision, and Git-safety checks. A manifest is created for auditing.
+6. Select **Apply approved plan** in the Review panel. VS Code asks for a second confirmation. Only approved, conflict-free actions are applied after source-hash, statement-boundary, destination, path, symlink, collision, and Git-safety checks. File moves are renamed; statement units are written as new files and leave the mixed source intact unless project rules enable archival. A manifest is created for auditing and rollback.
 
 7. If the latest Apply must be undone, run **SQL Organizer: Roll Back Last Apply**. Rollback refuses to overwrite or replace files that changed after Apply.
 
@@ -33,6 +33,14 @@ Configure → Scan and Create Plan → Review → Apply
 ```
 
 The SQL Organizer Activity Bar view also shows pending analysis, duplicate items, low-confidence results, and pending plans.
+
+## Adaptive categories and incremental organization
+
+SQL Organizer maintains a local taxonomy in `.sql-organizer/taxonomy.json`. It combines configured categories, existing library folders, and previously approved results. During a scan the LLM receives the bounded category vocabulary and example metadata, so it reuses established categories whenever possible. When no category fits, it proposes a portable lowercase kebab-case category; Review shows it before Apply creates the destination folder and records it in the local taxonomy.
+
+The classification cache is based on SQL content, selected model, prompt version, and taxonomy context—not an absolute path. You may move the complete SQL library to another location, open it there, and run Scan again. Existing results are rebound to the new paths, while new or changed SQL is analyzed incrementally. A plan created before moving files must be recreated because its source-hash safety checks intentionally reject stale paths.
+
+Independent statements in a mixed SQL file can be organized separately. Procedures, transactions, dynamic SQL, malformed text, and ambiguous boundaries are deliberately kept together. The original mixed file is preserved by default.
 
 ## Use the Activity Bar workflow
 

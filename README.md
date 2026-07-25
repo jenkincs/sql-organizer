@@ -1,6 +1,6 @@
 # SQL Organizer
 
-Local-first VS Code extension for scanning, classifying and safely organizing SQL files. It never executes SQL, connects to databases, deletes files, overwrites files, or stores API keys in workspace files.
+Local-first VS Code extension for adaptively classifying and safely organizing SQL files. It never executes SQL, connects to databases, silently deletes files, overwrites files, or stores API keys in workspace files.
 
 ## Workflow
 
@@ -15,11 +15,11 @@ All primary actions are available in the **SQL Organizer** Activity Bar view. Th
 ## Install
 
 ```bash
-code --install-extension sql-organizer-0.1.9.vsix
+code --install-extension sql-organizer-0.2.0.vsix
 ```
 
 See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuration, review, Apply, and rollback instructions.
 
 ## Safety
 
-Only approved actions are renamed through VS Code's filesystem API. Apply rechecks source hashes, destination containment, symlinks, conflicts, and optional Git cleanliness. Full details are in [docs/SECURITY.md](docs/SECURITY.md).
+Only approved actions run through VS Code's filesystem API. Whole files are moved; independent safe statements are extracted into new files while their source remains unchanged by default. Apply rechecks source hashes, statement boundaries, destination containment, symlinks, conflicts, and optional Git cleanliness. Full details are in [docs/SECURITY.md](docs/SECURITY.md).

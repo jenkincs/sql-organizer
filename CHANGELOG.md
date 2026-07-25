@@ -2,7 +2,11 @@
 
 ## Unreleased
 
-- Normalize `low`, `medium`, `high`, numeric-string, and percentage confidence values returned by compatible models.
+- Added adaptive local taxonomy discovery, proposal, approval, and persistence.
+- Added conservative independent-statement extraction with provenance and source preservation by default.
+- Added taxonomy-aware, relocation-safe incremental classification caching.
+- Added Review details for SQL units, statement ranges, proposed categories, and extraction actions.
+- Added guarded Apply and rollback for generated statement files.
 
 ## 0.1.9
 
