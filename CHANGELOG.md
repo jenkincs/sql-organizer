@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Changed organization output to one provenance-marked SQL file per business module under `modules/`.
+- Normalized the compatible `plpgsql` dialect label to `postgresql`.
 - Added adaptive local taxonomy discovery, proposal, approval, and persistence.
 - Added conservative independent-statement extraction with provenance and source preservation by default.
 - Added taxonomy-aware, relocation-safe incremental classification caching.

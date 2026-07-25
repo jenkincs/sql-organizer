@@ -22,4 +22,4 @@ See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuratio
 
 ## Safety
 
-Only approved actions run through VS Code's filesystem API. Whole files are moved; independent safe statements are extracted into new files while their source remains unchanged by default. Apply rechecks source hashes, statement boundaries, destination containment, symlinks, conflicts, and optional Git cleanliness. Full details are in [docs/SECURITY.md](docs/SECURITY.md).
+Only approved actions run through VS Code's filesystem API. SQL is consolidated by business module into `modules/<module>.sql`; each appended unit carries local provenance metadata and sources remain unchanged by default. Apply rechecks source hashes, statement boundaries, destination containment, symlinks, conflicts, and optional Git cleanliness. Full details are in [docs/SECURITY.md](docs/SECURITY.md).

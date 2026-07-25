@@ -42,6 +42,12 @@ The classification cache is based on SQL content, selected model, prompt version
 
 Independent statements in a mixed SQL file can be organized separately. Procedures, transactions, dynamic SQL, malformed text, and ambiguous boundaries are deliberately kept together. The original mixed file is preserved by default.
 
+## Module files
+
+The default output model is one file per business module, under `modules/`: for example, customer-related SQL is appended to `modules/customer.sql` and booking-related SQL to `modules/booking.sql`. CRUD, DDL, and other SQL for the same business module share that module file; provenance comments identify every appended source unit and prevent re-adding the same content. The source inbox files remain unchanged unless you explicitly enable archival.
+
+For a query that joins several modules, SQL Organizer chooses one **primary module** based on the query's business intent and keeps the other modules as related-category tags. For example, a booking search joined to customer data belongs in `booking.sql`; a cross-module aggregate belongs in `reporting.sql`; a query with no clear owner should use an explicit `integration` or `shared` module. The same query is never copied into multiple module files.
+
 ## Use the Activity Bar workflow
 
 You do not need to use the Command Palette for day-to-day work. Select the SQL Organizer icon in the VS Code Activity Bar and use the **Workflow** view:

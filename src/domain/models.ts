@@ -3,7 +3,7 @@ export type SqlDialect = 'oracle' | 'postgresql' | 'mysql' | 'sqlserver' | 'sqli
 export type SqlRisk = 'read-only' | 'write' | 'schema-change' | 'dynamic' | 'unknown';
 export type SqlUnitKind = 'file' | 'statement';
 export type TaxonomyDecision = 'existing' | 'proposed' | 'unknown';
-export type PlanActionKind = 'move' | 'extract' | 'archive' | 'create-category';
+export type PlanActionKind = 'move' | 'extract' | 'append' | 'archive' | 'create-category';
 export interface SqlInventoryItem {
   id: string;
   uri: string;

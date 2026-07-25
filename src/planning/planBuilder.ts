@@ -28,14 +28,13 @@ export function buildPlan(
           ? proposeCategory(category, c.purpose, taxonomy)
           : undefined;
       if (proposal) taxonomyProposals.set(proposal.slug, proposal);
-      const op = config.taxonomy.operationFolders[c.operation] ?? 'unknown';
-      const filename = sanitizeFilename(c.suggestedFilename, config.naming.maxLength);
-      let destination = item.exactDuplicateGroupId
-        ? `${config.duplicates.exactFolder}/${category}/${filename}`
-        : `${category}/${op}/${filename}`;
+      const op = 'module';
+      const filename = sanitizeFilename(`${category}.sql`, config.naming.maxLength);
+      let destination = `${config.organization.moduleFolder.replace(/\/+$/, '')}/${filename}`;
+      if (item.exactDuplicateGroupId) destination = `${config.duplicates.exactFolder}/${filename}`;
       let status: PlanAction['status'] = 'pending';
       const errors: string[] = [];
-      if (destinations.has(destination)) {
+      if (destinations.has(destination) && item.exactDuplicateGroupId) {
         status = 'conflict';
         errors.push('duplicate-destination');
       }
@@ -65,7 +64,7 @@ export function buildPlan(
         status,
         userModified: false,
         validationErrors: errors,
-        kind: item.unitKind === 'statement' ? 'extract' : 'move',
+        kind: 'append',
         sourceUnitId: item.id,
         sourceStartLine: item.startLine,
         sourceEndLine: item.endLine,

@@ -9,7 +9,7 @@ const configSchema = z.object({
       include: z.array(z.string()).default(['**/*.sql']),
       exclude: z
         .array(z.string())
-        .default(['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**']),
+        .default(['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**', 'modules/**']),
       inbox: z.array(z.string()).default(['inbox/**']),
       maxFileBytes: z.number().int().positive().default(300000),
     })
@@ -74,6 +74,12 @@ const configSchema = z.object({
       archiveOriginalAfterSplit: z.boolean().default(false),
       maxStatementsPerFile: z.number().int().positive().max(1000).default(200),
       keepProceduralBlocksTogether: z.literal(true).default(true),
+    })
+    .default({}),
+  organization: z
+    .object({
+      mode: z.literal('module-files').default('module-files'),
+      moduleFolder: z.string().default('modules'),
     })
     .default({}),
   ai: z

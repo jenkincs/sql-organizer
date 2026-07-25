@@ -33,6 +33,10 @@ export async function rollbackLast(root: vscode.Uri, manifest: ApplyManifest): P
       vscode.Uri.joinPath(root, ...move.source.split('/')),
       { overwrite: false },
     );
-  for (const write of [...manifest.writes].reverse())
-    await vscode.workspace.fs.delete(safeDestination(root, write.destination));
+  for (const write of [...manifest.writes].reverse()) {
+    const destination = safeDestination(root, write.destination);
+    if (write.existedBefore)
+      await vscode.workspace.fs.writeFile(destination, Buffer.from(write.previousContent ?? '', 'utf8'));
+    else await vscode.workspace.fs.delete(destination);
+  }
 }

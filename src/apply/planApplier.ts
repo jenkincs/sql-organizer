@@ -15,7 +15,7 @@ export interface ApplyManifest {
   gitState: GitState;
   result: 'success' | 'failed';
   moves: { source: string; destination: string; sourceHashBefore: string; destinationHashAfter: string }[];
-  writes: { destination: string; destinationHashAfter: string }[];
+  writes: { destination: string; destinationHashAfter: string; existedBefore: boolean; previousContent?: string }[];
   taxonomyAdded: string[];
   errors: string[];
 }
@@ -49,10 +49,16 @@ export class PlanApplier {
       for (const action of actions) {
         const destination = safeDestination(this.root, action.finalDestination);
         await vscode.workspace.fs.createDirectory(vscode.Uri.file(path.posix.dirname(destination.path)));
-        if (action.kind === 'extract') {
+        if (action.kind === 'append') {
+          await this.appendToModule(action, destination, writes);
+        } else if (action.kind === 'extract') {
           const content = await this.extractContent(action);
           await vscode.workspace.fs.writeFile(destination, Buffer.from(content, 'utf8'));
-          writes.push({ destination: action.finalDestination, destinationHashAfter: sha256(content) });
+          writes.push({
+            destination: action.finalDestination,
+            destinationHashAfter: sha256(content),
+            existedBefore: false,
+          });
         } else {
           const source = vscode.Uri.parse(action.sourceUri);
           await vscode.workspace.fs.rename(source, destination, { overwrite: false });
@@ -107,17 +113,22 @@ export class PlanApplier {
     const source = vscode.Uri.parse(action.sourceUri);
     const raw = sha256(Buffer.from(await vscode.workspace.fs.readFile(source)).toString('utf8'));
     if (raw !== action.sourceRawHash) throw new Error(`Source changed: ${action.sourceRelativePath}`);
-    if (action.kind === 'extract') await this.extractContent(action);
-    await this.preflightDestination(action.finalDestination, destinations);
+    if (action.kind === 'extract' || action.kind === 'append') await this.extractContent(action);
+    await this.preflightDestination(action.finalDestination, destinations, action.kind === 'append');
   }
 
-  private async preflightDestination(destination: string, destinations: Set<string>): Promise<void> {
+  private async preflightDestination(
+    destination: string,
+    destinations: Set<string>,
+    allowExisting = false,
+  ): Promise<void> {
     const uri = safeDestination(this.root, destination);
     await assertNoSymlink(this.root, uri);
-    if (destinations.has(uri.toString())) throw new Error(`Duplicate destination: ${destination}`);
+    if (destinations.has(uri.toString()) && !allowExisting) throw new Error(`Duplicate destination: ${destination}`);
     destinations.add(uri.toString());
     try {
       await vscode.workspace.fs.stat(uri);
+      if (allowExisting) return;
       throw new Error(`Destination exists: ${destination}`);
     } catch (error) {
       if (error instanceof vscode.FileSystemError && error.code === 'FileNotFound') return;
@@ -129,11 +140,41 @@ export class PlanApplier {
     const source = vscode.Uri.parse(action.sourceUri);
     const text = Buffer.from(await vscode.workspace.fs.readFile(source)).toString('utf8');
     const index = action.sourceStatementIndex;
+    if (index === undefined && action.kind === 'append') return text;
     if (index === undefined) throw new Error(`Missing statement provenance: ${action.sourceRelativePath}`);
     const fragment = splitSqlStatements(text, this.config.splitting.maxStatementsPerFile)[index];
     if (!fragment || fragment.safety !== 'safe')
       throw new Error(`Statement boundary changed: ${action.sourceRelativePath}`);
     return fragment.sql;
+  }
+
+  private async appendToModule(
+    action: PlanAction,
+    destination: vscode.Uri,
+    writes: ApplyManifest['writes'],
+  ): Promise<void> {
+    const content = await this.extractContent(action);
+    const marker = `-- SQL Organizer: source=${action.sourceRelativePath} unit=${action.sourceUnitId ?? action.id} hash=${action.sourceRawHash}`;
+    let before = '';
+    let existedBefore = false;
+    try {
+      before = Buffer.from(await vscode.workspace.fs.readFile(destination)).toString('utf8');
+      existedBefore = true;
+    } catch (error) {
+      if (!(error instanceof vscode.FileSystemError && error.code === 'FileNotFound')) throw error;
+    }
+    const prior = writes.find((write) => write.destination === action.finalDestination);
+    if (before.includes(marker)) return;
+    const appended = `${before.trimEnd()}${before.trim() ? '\n\n' : ''}${marker}\n-- module=${action.finalCategory} operation=${action.proposedOperationFolder}\n${content.trim()}\n`;
+    await vscode.workspace.fs.writeFile(destination, Buffer.from(appended, 'utf8'));
+    if (prior) prior.destinationHashAfter = sha256(appended);
+    else
+      writes.push({
+        destination: action.finalDestination,
+        destinationHashAfter: sha256(appended),
+        existedBefore,
+        previousContent: existedBefore ? before : undefined,
+      });
   }
 
   private archiveCandidates(
@@ -206,7 +247,11 @@ export class PlanApplier {
       try {
         const destination = safeDestination(this.root, write.destination);
         const content = Buffer.from(await vscode.workspace.fs.readFile(destination)).toString('utf8');
-        if (sha256(content) === write.destinationHashAfter) await vscode.workspace.fs.delete(destination);
+        if (sha256(content) === write.destinationHashAfter) {
+          if (write.existedBefore)
+            await vscode.workspace.fs.writeFile(destination, Buffer.from(write.previousContent ?? '', 'utf8'));
+          else await vscode.workspace.fs.delete(destination);
+        }
       } catch (rollbackError) {
         errors.push(
           `Automatic rollback failed: ${rollbackError instanceof Error ? rollbackError.message : String(rollbackError)}`,

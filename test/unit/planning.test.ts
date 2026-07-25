@@ -10,6 +10,7 @@ const config = {
   duplicates: { exactFolder: 'duplicates/exact', candidateThreshold: 0.72 },
   naming: { maxLength: 80 },
   splitting: { archiveOriginalAfterSplit: false },
+  organization: { moduleFolder: 'modules' },
 } as unknown as OrganizerConfig;
 describe('filename safety', () => {
   it('makes a portable kebab case filename', () => expect(sanitizeFilename('../CON.sql', 80)).toBe('con-sql.sql'));
@@ -71,7 +72,8 @@ describe('adaptive unit planning', () => {
       { version: 1, entries: [], updatedAt: 'now' },
     );
     expect(plan.version).toBe(2);
-    expect(plan.actions[0].kind).toBe('extract');
+    expect(plan.actions[0].kind).toBe('append');
+    expect(plan.actions[0].finalDestination).toBe('modules/audit-log.sql');
     expect(plan.taxonomyProposals?.[0].slug).toBe('audit-log');
   });
 });

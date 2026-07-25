@@ -1,7 +1,7 @@
 version: 1
 root:
   include: ['**/*.sql']
-  exclude: ['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**']
+  exclude: ['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**', 'modules/**']
   inbox: ['inbox/**']
   maxFileBytes: 300000
 taxonomy:
@@ -14,6 +14,9 @@ splitting:
   archiveOriginalAfterSplit: false
   maxStatementsPerFile: 200
   keepProceduralBlocksTogether: true
+organization:
+  mode: module-files
+  moduleFolder: modules
 classification:
   lowConfidenceThreshold: 0.70
   autoApproveThreshold: 0.95

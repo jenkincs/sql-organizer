@@ -110,6 +110,23 @@ suite('SQL Organizer Apply integration', () => {
     assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
   });
 
+  test('appends approved SQL units into one module file and restores it on rollback', async () => {
+    const first = 'SELECT * FROM bookings WHERE booking_id = :booking_id;';
+    const second = 'UPDATE bookings SET status = :status WHERE booking_id = :booking_id;';
+    const source = vscode.Uri.joinPath(root, 'inbox', 'booking.sql');
+    await vscode.workspace.fs.writeFile(source, Buffer.from(first));
+    const plan = makePlan(source, first, 'modules/booking.sql');
+    plan.actions[0].kind = 'append';
+    plan.actions[0].sourceUnitId = 'booking-read';
+    const manifest = await new PlanApplier(root, config, new Repository(root, config)).apply(plan);
+    const destination = vscode.Uri.joinPath(root, 'modules', 'booking.sql');
+    assert.match(Buffer.from(await vscode.workspace.fs.readFile(destination)).toString(), /SELECT \* FROM bookings/);
+    assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), first);
+    await rollbackLast(root, manifest);
+    await assert.rejects(vscode.workspace.fs.stat(destination));
+    await vscode.workspace.fs.writeFile(source, Buffer.from(second));
+  });
+
   test('blocks Apply when Git requires a clean worktree', async () => {
     const text = 'SELECT 1;';
     const source = vscode.Uri.joinPath(root, 'inbox', 'source.sql');
