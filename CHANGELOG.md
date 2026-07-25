@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.9
+
+- Fixed Responses-compatible endpoints that require an explicit JSON instruction in the request input when JSON-object mode is enabled.
+
 ## 0.1.8
 
 - Added phase and per-file progress feedback to Scan and Create Plan.

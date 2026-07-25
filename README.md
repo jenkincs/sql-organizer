@@ -15,7 +15,7 @@ All primary actions are available in the **SQL Organizer** Activity Bar view. Th
 ## Install
 
 ```bash
-code --install-extension sql-organizer-0.1.8.vsix
+code --install-extension sql-organizer-0.1.9.vsix
 ```
 
 See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuration, review, Apply, and rollback instructions.

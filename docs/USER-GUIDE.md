@@ -7,7 +7,7 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 1. Install the VSIX from a terminal:
 
    ```bash
-   code --install-extension sql-organizer-0.1.8.vsix
+   code --install-extension sql-organizer-0.1.9.vsix
    ```
 
 2. Open the workspace folder that contains the SQL files. In a multi-root workspace, run **SQL Organizer: Select Workspace Folder** and choose the SQL library to operate on.
