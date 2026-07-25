@@ -11,6 +11,8 @@
     "risk",
     "riskReasons",
     "confidence",
-    "reviewNotes"
+    "reviewNotes",
+    "relatedCategories",
+    "taxonomyDecision"
   ]
 }

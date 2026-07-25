@@ -8,6 +8,16 @@ function stringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
+function portableSlug(value: unknown, fallback = 'unknown'): string {
+  return (
+    (typeof value === 'string' ? value : fallback)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 64) || fallback
+  );
+}
+
 function filename(value: unknown): string {
   const base =
     (typeof value === 'string' ? value : 'unnamed')
@@ -47,7 +57,11 @@ function confidence(value: unknown): number {
 }
 
 /** Normalizes common provider/model variants before applying the strict persisted schema. */
-export function normalizeClassificationResponse(value: unknown, fallbackOperation: SqlOperation): unknown {
+export function normalizeClassificationResponse(
+  value: unknown,
+  fallbackOperation: SqlOperation,
+  knownCategories: string[] = [],
+): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
   const raw = value as Record<string, unknown>;
   const normalizedOperation = operation(raw.operation, fallbackOperation);
@@ -56,8 +70,25 @@ export function normalizeClassificationResponse(value: unknown, fallbackOperatio
   const riskReasons = stringArray(raw.riskReasons);
   if (rawRisk && risk === 'unknown' && rawRisk !== 'unknown')
     riskReasons.push(`AI returned unsupported risk value "${rawRisk}"; treated as unknown for safety.`);
+  const category = portableSlug(raw.category);
+  const relatedCategories = [
+    ...new Set(
+      stringArray(raw.relatedCategories)
+        .map((item) => portableSlug(item))
+        .filter((item) => item !== category),
+    ),
+  ];
+  const rawDecision = typeof raw.taxonomyDecision === 'string' ? raw.taxonomyDecision.toLowerCase() : '';
+  const taxonomyDecision =
+    rawDecision === 'existing' || rawDecision === 'proposed' || rawDecision === 'unknown'
+      ? rawDecision
+      : knownCategories.includes(category)
+        ? 'existing'
+        : category === 'unknown'
+          ? 'unknown'
+          : 'proposed';
   return {
-    category: typeof raw.category === 'string' ? raw.category.trim() : raw.category,
+    category,
     operation: normalizedOperation,
     dialect:
       typeof raw.dialect === 'string'
@@ -72,6 +103,8 @@ export function normalizeClassificationResponse(value: unknown, fallbackOperatio
     riskReasons,
     confidence: confidence(raw.confidence),
     reviewNotes: stringArray(raw.reviewNotes),
+    relatedCategories,
+    taxonomyDecision,
   };
 }
 
@@ -88,5 +121,7 @@ export const classificationSchema = z
     riskReasons: z.array(z.string()),
     confidence: z.number().min(0).max(1),
     reviewNotes: z.array(z.string()),
+    relatedCategories: z.array(z.string()).default([]),
+    taxonomyDecision: z.enum(['existing', 'proposed', 'unknown']).default('existing'),
   })
   .strict();

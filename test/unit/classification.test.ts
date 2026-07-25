@@ -51,6 +51,8 @@ describe('classification response normalization', () => {
           riskReasons: [],
           confidence: 'high',
           reviewNotes: [],
+          relatedCategories: ['access control'],
+          taxonomyDecision: 'proposed',
           providerSpecificField: true,
         },
         'UNKNOWN',
@@ -61,6 +63,8 @@ describe('classification response normalization', () => {
     expect(normalized.risk).toBe('unknown');
     expect(normalized.suggestedFilename).toBe('grant-reporting-access.sql');
     expect(normalized.confidence).toBe(0.85);
+    expect(normalized.relatedCategories).toEqual(['access-control']);
+    expect(normalized.taxonomyDecision).toBe('proposed');
     expect(normalized.riskReasons[0]).toContain('unsupported risk value');
   });
 });

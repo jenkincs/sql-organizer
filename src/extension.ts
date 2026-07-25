@@ -15,6 +15,7 @@ import { rollbackLast } from './apply/rollbackService';
 import { ApplyManifest } from './apply/planApplier';
 import { LlmConfigPanel } from './views/llmConfigPanel';
 import { LlmSettingsStore, profileSecretKey } from './ai/llmSettingsStore';
+import { buildTaxonomyState, taxonomyPromptContext } from './taxonomy/taxonomyService';
 
 export function activate(context: vscode.ExtensionContext): void {
   const logger = new Logger();
@@ -136,11 +137,22 @@ export function activate(context: vscode.ExtensionContext): void {
       protocol: profile.apiProtocol,
       timeoutMs: config.ai.timeoutMs,
     });
-    return new ClassificationService(folder, config, repo, provider, `${profile.id}:${model}`).analyze(
+    const taxonomy = buildTaxonomyState(
+      config.taxonomy.categories,
+      await repo.taxonomy(),
       await repo.inventory(),
-      token,
-      onProgress,
+      await repo.classifications(),
+      await repo.plan(),
     );
+    await repo.saveTaxonomy(taxonomy);
+    return new ClassificationService(
+      folder,
+      config,
+      repo,
+      provider,
+      `${profile.id}:${model}`,
+      taxonomyPromptContext(taxonomy, config.taxonomy.maxContextExamples),
+    ).analyze(await repo.inventory(), token, onProgress);
   };
   const createReviewPlan = async (
     folder: vscode.Uri,

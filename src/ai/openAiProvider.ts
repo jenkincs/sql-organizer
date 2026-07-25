@@ -12,7 +12,7 @@ export interface OpenAiProviderOptions {
   protocol?: OpenAiProtocol;
 }
 const systemPrompt =
-  'You are SQL Librarian. Return only a JSON object with category, operation, dialect, purpose, suggestedFilename, tables, parameters, risk, riskReasons, confidence and reviewNotes. Never execute SQL or recommend deletion.';
+  'You are SQL Librarian. Return only a JSON object with category, taxonomyDecision, relatedCategories, operation, dialect, purpose, suggestedFilename, tables, parameters, risk, riskReasons, confidence and reviewNotes. Reuse an existing category whenever it fits. If none fits, propose a concise lowercase kebab-case category and set taxonomyDecision to proposed. Never execute SQL or recommend deletion.';
 
 /** Validates a user-controlled endpoint without retaining credentials or query data. */
 export function normalizeBaseUrl(value?: string): string | undefined {
@@ -52,7 +52,9 @@ export class OpenAiProvider implements AiProvider {
       this.protocol === 'responses'
         ? await this.classifyWithResponses(input)
         : await this.classifyWithChatCompletions(input);
-    return classificationSchema.parse(normalizeClassificationResponse(JSON.parse(content), input.operation));
+    return classificationSchema.parse(
+      normalizeClassificationResponse(JSON.parse(content), input.operation, input.categories),
+    );
   }
   async testConnection(): Promise<void> {
     if (!this.options.model) throw new Error('Select a model before testing the connection.');

@@ -9,6 +9,11 @@ import { retryableAiError, safeAiErrorMessage } from './classificationRecovery';
 import { classificationSchema } from './responseValidator';
 import { bindClassificationToItem } from './classificationCache';
 
+export interface ClassificationTaxonomyContext {
+  categories: string[];
+  examples: { category: string; relativePath: string; purpose: string; tables: string[] }[];
+}
+
 export interface ClassificationProgress {
   completed: number;
   total: number;
@@ -36,6 +41,7 @@ export class ClassificationService {
     private readonly repository: Repository,
     private readonly provider: AiProvider,
     private readonly model: string,
+    private readonly taxonomy: ClassificationTaxonomyContext,
   ) {}
 
   async analyze(
@@ -62,7 +68,7 @@ export class ClassificationService {
       return saveQueue;
     };
     const classify = async (item: SqlInventoryItem): Promise<'cached' | 'analyzed' | 'failed'> => {
-      const key = sha256(`${item.rawHash}|v1|${JSON.stringify(this.config.taxonomy.categories)}|${this.model}`);
+      const key = sha256(`${item.rawHash}|units-v2|${JSON.stringify(this.taxonomy)}|${this.model}`);
       const cachedRecord = cache.get(key);
       if (cachedRecord) {
         const rebound = bindClassificationToItem(records, cachedRecord, item.id);
@@ -87,7 +93,8 @@ export class ClassificationService {
                 tables: item.tables,
                 parameters: item.parameters,
                 redactedSql: redactSql(sql).slice(0, this.config.ai.maxSqlChars),
-                categories: this.config.taxonomy.categories,
+                categories: this.taxonomy.categories,
+                taxonomyExamples: this.taxonomy.examples,
               }),
             );
             break;
