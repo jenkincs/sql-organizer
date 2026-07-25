@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.7
+
+- Added a focused Workflow view to the SQL Organizer Activity Bar.
+- Added direct sidebar actions and a title toolbar for Configure, Scan and Create Plan, Review, Apply, project rules, and rollback.
+- Kept the Command Palette as an optional alternative instead of the primary workflow.
+
 ## 0.1.6
 
 - Simplified the primary workflow to Configure → Scan and Create Plan → Review and Apply.

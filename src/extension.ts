@@ -53,10 +53,12 @@ export function activate(context: vscode.ExtensionContext): void {
     const folder = root();
     return folder ? new Repository(folder, await loadConfig(folder)) : undefined;
   };
+  const workflow = new OrganizerTreeProvider('workflow', repository);
   const overview = new OrganizerTreeProvider('overview', repository);
   const library = new OrganizerTreeProvider('library', repository);
   const issues = new OrganizerTreeProvider('issues', repository);
   const refresh = () => {
+    workflow.refresh();
     overview.refresh();
     library.refresh();
     issues.refresh();
@@ -154,6 +156,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     logger,
     status,
+    vscode.window.registerTreeDataProvider('sqlOrganizer.workflow', workflow),
     vscode.window.registerTreeDataProvider('sqlOrganizer.overview', overview),
     vscode.window.registerTreeDataProvider('sqlOrganizer.library', library),
     vscode.window.registerTreeDataProvider('sqlOrganizer.issues', issues),

@@ -7,7 +7,7 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 1. Install the VSIX from a terminal:
 
    ```bash
-   code --install-extension sql-organizer-0.1.6.vsix
+   code --install-extension sql-organizer-0.1.7.vsix
    ```
 
 2. Open the workspace folder that contains the SQL files. In a multi-root workspace, run **SQL Organizer: Select Workspace Folder** and choose the SQL library to operate on.
@@ -31,6 +31,16 @@ Configure → Scan and Create Plan → Review → Apply
 ```
 
 The SQL Organizer Activity Bar view also shows pending analysis, duplicate items, low-confidence results, and pending plans.
+
+## Use the Activity Bar workflow
+
+You do not need to use the Command Palette for day-to-day work. Select the SQL Organizer icon in the VS Code Activity Bar and use the **Workflow** view:
+
+1. **Configure LLM** opens endpoint, model, and API-key settings.
+2. **Scan and Create Plan** runs the complete safe preparation flow and opens Review.
+3. **Review and Apply** reopens the current plan, where you approve individual actions before applying them.
+
+The Workflow view also provides optional project rules and rollback actions. Its title toolbar offers the same primary actions for one-click access.
 
 ## AI endpoint and protocol
 

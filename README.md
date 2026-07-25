@@ -10,10 +10,12 @@ Local-first VS Code extension for scanning, classifying and safely organizing SQ
 
 `SQL Organizer: Initialize` is optional. Use it only when you want to create and edit a project-specific `sql-organizer.config.yml`; Scan uses safe defaults and creates its internal state automatically.
 
+All primary actions are available in the **SQL Organizer** Activity Bar view. The Workflow panel provides direct Configure, Scan and Create Plan, Review and Apply, project-rules, and rollback actions; the Command Palette is only an alternative entry point.
+
 ## Install
 
 ```bash
-code --install-extension sql-organizer-0.1.6.vsix
+code --install-extension sql-organizer-0.1.7.vsix
 ```
 
 See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuration, review, Apply, and rollback instructions.

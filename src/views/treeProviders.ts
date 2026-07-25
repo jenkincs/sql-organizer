@@ -5,7 +5,7 @@ export class OrganizerTreeProvider implements vscode.TreeDataProvider<vscode.Tre
   private readonly changed = new vscode.EventEmitter<vscode.TreeItem | undefined>();
   readonly onDidChangeTreeData = this.changed.event;
   constructor(
-    private readonly kind: 'overview' | 'library' | 'issues',
+    private readonly kind: 'workflow' | 'overview' | 'library' | 'issues',
     private readonly repository: () => Promise<Repository | undefined>,
   ) {}
   refresh(): void {
@@ -13,15 +13,54 @@ export class OrganizerTreeProvider implements vscode.TreeDataProvider<vscode.Tre
   }
   async getChildren(): Promise<vscode.TreeItem[]> {
     const repo = await this.repository();
-    if (!repo) return [];
-    const inventory = await repo.inventory();
-    const classifications = await repo.classifications();
-    const plan = await repo.plan();
+    const inventory = (await repo?.inventory()) ?? [];
+    const classifications = (await repo?.classifications()) ?? [];
+    const plan = await repo?.plan();
     const item = (label: string, count: number, command?: string): vscode.TreeItem => {
       const node = new vscode.TreeItem(`${label}  ${count}`, vscode.TreeItemCollapsibleState.None);
       node.command = command ? { command, title: label } : undefined;
       return node;
     };
+    const action = (label: string, description: string, command: string, icon: string): vscode.TreeItem => {
+      const node = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+      node.description = description;
+      node.tooltip = `${label}\n${description}`;
+      node.iconPath = new vscode.ThemeIcon(icon);
+      node.command = { command, title: label };
+      return node;
+    };
+    if (this.kind === 'workflow') {
+      const approved =
+        plan?.actions.filter((item) => item.status === 'approved' && !item.validationErrors.length).length ?? 0;
+      const pending = plan?.actions.filter((item) => item.status === 'pending').length ?? 0;
+      return [
+        action('1  Configure LLM', 'Endpoint, model, and API key', 'sqlOrganizer.configure', 'gear'),
+        action('2  Scan and Create Plan', 'Scan → classify → generate Review plan', 'sqlOrganizer.scan', 'search'),
+        action(
+          '3  Review and Apply',
+          approved
+            ? `${approved} approved action${approved === 1 ? '' : 's'} ready`
+            : pending
+              ? `${pending} action${pending === 1 ? '' : 's'} awaiting review`
+              : 'Open the current plan',
+          'sqlOrganizer.openReview',
+          'checklist',
+        ),
+        action(
+          'Open Project Rules',
+          'Optional taxonomy and safety settings',
+          'sqlOrganizer.openConfig',
+          'settings-gear',
+        ),
+        action(
+          'Roll Back Last Apply',
+          'Restore the most recent safe Apply',
+          'sqlOrganizer.rollbackLastApply',
+          'history',
+        ),
+      ];
+    }
+    if (!repo) return [];
     if (this.kind === 'overview')
       return [
         item('Inbox', inventory.filter((x) => x.classificationStatus === 'not-analyzed').length, 'sqlOrganizer.scan'),

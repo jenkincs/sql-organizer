@@ -2,7 +2,7 @@
   "name": "sql-organizer",
   "displayName": "SQL Organizer",
   "description": "A safe, local-first SQL file knowledge-base organizer.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "publisher": "sql-organizer",
   "license": "MIT",
@@ -139,6 +139,10 @@
     "views": {
       "sqlOrganizer": [
         {
+          "id": "sqlOrganizer.workflow",
+          "name": "Workflow"
+        },
+        {
           "id": "sqlOrganizer.overview",
           "name": "Overview"
         },
@@ -149,6 +153,35 @@
         {
           "id": "sqlOrganizer.issues",
           "name": "Issues"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "sqlOrganizer.configure",
+          "when": "view == sqlOrganizer.workflow",
+          "group": "navigation@1"
+        },
+        {
+          "command": "sqlOrganizer.scan",
+          "when": "view == sqlOrganizer.workflow",
+          "group": "navigation@2"
+        },
+        {
+          "command": "sqlOrganizer.openReview",
+          "when": "view == sqlOrganizer.workflow",
+          "group": "navigation@3"
+        },
+        {
+          "command": "sqlOrganizer.applyApprovedPlan",
+          "when": "view == sqlOrganizer.workflow",
+          "group": "navigation@4"
+        },
+        {
+          "command": "sqlOrganizer.refreshViews",
+          "when": "view == sqlOrganizer.workflow",
+          "group": "navigation@5"
         }
       ]
     },
