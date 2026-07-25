@@ -92,8 +92,13 @@ export function normalizeClassificationResponse(
     operation: normalizedOperation,
     dialect:
       typeof raw.dialect === 'string'
-        ? ({ postgresql: 'postgresql', postgres: 'postgresql', mssql: 'sqlserver' }[raw.dialect.trim().toLowerCase()] ??
-          raw.dialect.trim().toLowerCase())
+        ? ({
+            postgresql: 'postgresql',
+            postgres: 'postgresql',
+            postgis: 'postgresql',
+            plpgsql: 'postgresql',
+            mssql: 'sqlserver',
+          }[raw.dialect.trim().toLowerCase()] ?? raw.dialect.trim().toLowerCase())
         : raw.dialect,
     purpose: typeof raw.purpose === 'string' ? raw.purpose.trim() : raw.purpose,
     suggestedFilename: filename(raw.suggestedFilename),

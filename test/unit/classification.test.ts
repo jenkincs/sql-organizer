@@ -42,7 +42,7 @@ describe('classification response normalization', () => {
         {
           category: 'reporting',
           operation: 'GRANT',
-          dialect: 'Postgres',
+          dialect: 'plpgsql',
           purpose: 'Grant reporting access',
           suggestedFilename: 'Grant Reporting Access.SQL',
           tables: [],
