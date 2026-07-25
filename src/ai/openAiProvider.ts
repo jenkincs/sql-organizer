@@ -63,7 +63,8 @@ export class OpenAiProvider implements AiProvider {
         input: 'Reply with OK.',
         max_output_tokens: 16,
       });
-      if (!response.output_text) throw new Error('The endpoint returned no text.');
+      if (!response.output_text && !response.output?.length)
+        throw new Error('The endpoint returned no completion result.');
       return;
     }
     const response = await this.client.chat.completions.create({
@@ -71,7 +72,7 @@ export class OpenAiProvider implements AiProvider {
       messages: [{ role: 'user', content: 'Reply with OK.' }],
       max_tokens: 16,
     });
-    if (!response.choices[0]?.message.content) throw new Error('The endpoint returned no text.');
+    if (!response.choices.length) throw new Error('The endpoint returned no completion choices.');
   }
   private async classifyWithResponses(input: ClassificationInput): Promise<string> {
     const response = await this.client.responses.create({

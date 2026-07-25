@@ -72,4 +72,18 @@ describe('OpenAI endpoint support', () => {
     await expect(provider.classify(input)).resolves.toMatchObject(valid);
     expect(request).toMatchObject({ response_format: { type: 'json_object' } });
   });
+  it('accepts a successful thinking-only Chat Completions connection test', async () => {
+    const client = {
+      chat: {
+        completions: {
+          create: async () => ({ choices: [{ message: { reasoning_content: 'Thinking…', content: null } }] }),
+        },
+      },
+    } as unknown;
+    const provider = new OpenAiProvider(
+      { apiKey: 'test', model: 'deepseek-v4-flash', timeoutMs: 1, protocol: 'chat-completions' },
+      client as never,
+    );
+    await expect(provider.testConnection()).resolves.toBeUndefined();
+  });
 });
