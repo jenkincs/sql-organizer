@@ -19,10 +19,20 @@ export async function rollbackLast(root: vscode.Uri, manifest: ApplyManifest): P
     )
       throw new Error(`Rollback conflict: destination changed: ${move.destination}`);
   }
+  for (const write of manifest.writes) {
+    const destination = safeDestination(root, write.destination);
+    if (
+      sha256(Buffer.from(await vscode.workspace.fs.readFile(destination)).toString('utf8')) !==
+      write.destinationHashAfter
+    )
+      throw new Error(`Rollback conflict: generated file changed: ${write.destination}`);
+  }
   for (const move of [...manifest.moves].reverse())
     await vscode.workspace.fs.rename(
       safeDestination(root, move.destination),
       vscode.Uri.joinPath(root, ...move.source.split('/')),
       { overwrite: false },
     );
+  for (const write of [...manifest.writes].reverse())
+    await vscode.workspace.fs.delete(safeDestination(root, write.destination));
 }

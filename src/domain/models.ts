@@ -100,6 +100,7 @@ export interface PlanAction {
   sourceUnitId?: string;
   sourceStartLine?: number;
   sourceEndLine?: number;
+  sourceStatementIndex?: number;
   content?: string;
   archiveSource?: boolean;
   taxonomyProposal?: TaxonomyProposal;

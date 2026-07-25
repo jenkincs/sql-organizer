@@ -90,6 +90,26 @@ suite('SQL Organizer Apply integration', () => {
     assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
   });
 
+  test('extracts an approved statement without modifying its mixed SQL source and rolls it back', async () => {
+    const text = 'SELECT * FROM users;\nUPDATE bookings SET status = :status;';
+    const source = vscode.Uri.joinPath(root, 'inbox', 'mixed.sql');
+    await vscode.workspace.fs.writeFile(source, Buffer.from(text));
+    const plan = makePlan(source, text, 'booking/dml/update-booking-status.sql');
+    plan.actions[0].kind = 'extract';
+    plan.actions[0].sourceStatementIndex = 1;
+    const manifest = await new PlanApplier(root, config, new Repository(root, config)).apply(plan);
+    const destination = vscode.Uri.joinPath(root, 'booking', 'dml', 'update-booking-status.sql');
+    assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
+    assert.equal(
+      Buffer.from(await vscode.workspace.fs.readFile(destination)).toString(),
+      '\nUPDATE bookings SET status = :status;',
+    );
+    assert.equal(manifest.writes.length, 1);
+    await rollbackLast(root, manifest);
+    await assert.rejects(vscode.workspace.fs.stat(destination));
+    assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
+  });
+
   test('blocks Apply when Git requires a clean worktree', async () => {
     const text = 'SELECT 1;';
     const source = vscode.Uri.joinPath(root, 'inbox', 'source.sql');

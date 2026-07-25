@@ -69,6 +69,7 @@ export function buildPlan(
         sourceUnitId: item.id,
         sourceStartLine: item.startLine,
         sourceEndLine: item.endLine,
+        sourceStatementIndex: item.statementIndex,
         archiveSource: item.unitKind === 'statement' && config.splitting.archiveOriginalAfterSplit,
         taxonomyProposal: proposal,
       };
