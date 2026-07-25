@@ -75,11 +75,25 @@ export interface TaxonomyProposal {
   reason: string;
   actionId?: string;
 }
+/** Durable provenance for SQL already written to a generated module file. */
+export interface ModuleIndexEntry {
+  rawHash: string;
+  destination: string;
+  sourceRelativePath: string;
+  organizedAt: string;
+}
+export interface ModuleIndex {
+  version: 1;
+  entries: ModuleIndexEntry[];
+  updatedAt: string;
+}
 export interface PlanAction {
   id: string;
   sourceUri: string;
   sourceRelativePath: string;
   sourceRawHash: string;
+  /** Hash of this SQL unit; sourceRawHash deliberately remains the whole-file guard. */
+  sourceUnitRawHash?: string;
   proposedCategory: string;
   proposedOperationFolder: string;
   proposedFilename: string;
@@ -117,4 +131,6 @@ export interface OrganizerPlan {
   warnings: string[];
   status: 'draft' | 'reviewing' | 'ready' | 'partially-applied' | 'applied' | 'stale';
   taxonomyProposals?: TaxonomyProposal[];
+  /** Units excluded because the exact source content is already present in its module. */
+  skippedAlreadyOrganized?: number;
 }

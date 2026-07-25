@@ -39,4 +39,15 @@ export async function rollbackLast(root: vscode.Uri, manifest: ApplyManifest): P
       await vscode.workspace.fs.writeFile(destination, Buffer.from(write.previousContent ?? '', 'utf8'));
     else await vscode.workspace.fs.delete(destination);
   }
+  if (manifest.moduleIndexPath && manifest.moduleIndexAdded?.length) {
+    const indexUri = safeDestination(root, manifest.moduleIndexPath);
+    const current = JSON.parse(Buffer.from(await vscode.workspace.fs.readFile(indexUri)).toString('utf8')) as {
+      entries?: { rawHash: string; destination: string }[];
+    };
+    const removed = new Set(manifest.moduleIndexAdded.map((entry) => `${entry.rawHash}\u0000${entry.destination}`));
+    current.entries = (current.entries ?? []).filter(
+      (entry) => !removed.has(`${entry.rawHash}\u0000${entry.destination}`),
+    );
+    await vscode.workspace.fs.writeFile(indexUri, Buffer.from(JSON.stringify(current, null, 2), 'utf8'));
+  }
 }

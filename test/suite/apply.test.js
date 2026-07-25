@@ -122,8 +122,10 @@ suite('SQL Organizer Apply integration', () => {
     const destination = vscode.Uri.joinPath(root, 'modules', 'booking.sql');
     assert.match(Buffer.from(await vscode.workspace.fs.readFile(destination)).toString(), /SELECT \* FROM bookings/);
     assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), first);
+    assert.equal((await new Repository(root, config).moduleIndex()).entries.length, 1);
     await rollbackLast(root, manifest);
     await assert.rejects(vscode.workspace.fs.stat(destination));
+    assert.equal((await new Repository(root, config).moduleIndex()).entries.length, 0);
     await vscode.workspace.fs.writeFile(source, Buffer.from(second));
   });
 
@@ -161,6 +163,8 @@ suite('SQL Organizer Apply integration', () => {
     await fs.writeFile(path.join(folder, '.sql-organizer', 'plan.json'), '{}');
     await fs.writeFile(path.join(folder, 'SQL-ORGANIZER-REPORT.md'), '# Generated report\n');
     await fs.writeFile(path.join(folder, 'INDEX.md'), '# Generated index\n');
+    await fs.mkdir(path.join(folder, 'modules'), { recursive: true });
+    await fs.writeFile(path.join(folder, 'modules', 'booking.sql'), '-- generated module\n');
     const guarded = JSON.parse(JSON.stringify(config));
     guarded.safety.requireCleanGitForApply = true;
     const plan = makePlan(source, text);

@@ -8,6 +8,7 @@
 - Exact duplicates: 0
 - Similar candidates: 0
 - Proposed moves: 1
+- Already organized units skipped: 0
 
 ## Safety
 

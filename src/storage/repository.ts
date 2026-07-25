@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { OrganizerConfig } from '../config/config';
-import { ClassificationRecord, OrganizerPlan, SqlInventoryItem, TaxonomyState } from '../domain/models';
+import { ClassificationRecord, ModuleIndex, OrganizerPlan, SqlInventoryItem, TaxonomyState } from '../domain/models';
 import { migrateClassifications, migrateInventory, migratePlan } from './stateMigration';
 export class Repository {
   constructor(
@@ -48,6 +48,19 @@ export class Repository {
   }
   saveTaxonomy(state: TaxonomyState): Promise<void> {
     return this.write('taxonomy.json', state);
+  }
+  moduleIndex(): Promise<ModuleIndex> {
+    return this.read<ModuleIndex>('module-index.json', {
+      version: 1,
+      entries: [],
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  saveModuleIndex(index: ModuleIndex): Promise<void> {
+    return this.write('module-index.json', index);
+  }
+  moduleDestination(category: string): string {
+    return `${this.config.organization.moduleFolder.replace(/\/+$/, '')}/${category}.sql`;
   }
   async writeManifest(name: string, value: unknown): Promise<void> {
     return this.write(`${this.config.output.manifestFolder}/${name}`, value);

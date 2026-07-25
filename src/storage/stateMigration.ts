@@ -41,6 +41,7 @@ export function migratePlan(value: unknown): OrganizerPlan | undefined {
       ...action,
       kind: action.kind ?? 'move',
       sourceUnitId: action.sourceUnitId ?? action.id,
+      sourceUnitRawHash: action.sourceUnitRawHash ?? action.sourceRawHash,
     })),
     taxonomyProposals: plan.taxonomyProposals ?? [],
   };

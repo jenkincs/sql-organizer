@@ -77,4 +77,59 @@ describe('adaptive unit planning', () => {
     expect(plan.actions[0].sourceStatementIndex).toBe(1);
     expect(plan.taxonomyProposals?.[0].slug).toBe('audit-log');
   });
+
+  it('omits SQL units that already exist in their selected module', () => {
+    const item: SqlInventoryItem = {
+      id: 'already-organized',
+      uri: 'file:///workspace/booking.sql',
+      relativePath: 'booking.sql',
+      rawHash: 'unit-hash',
+      normalizedHash: 'unit-hash',
+      normalizedTokens: [],
+      sizeBytes: 1,
+      modifiedAt: 1,
+      operation: 'SELECT',
+      dialectHint: 'generic',
+      tables: ['bookings'],
+      parameters: [],
+      warnings: [],
+      classificationStatus: 'analyzed',
+      unitKind: 'file',
+    };
+    const records = [
+      {
+        itemId: item.id,
+        cacheKey: 'key',
+        analyzedAt: 'now',
+        classification: {
+          category: 'booking',
+          taxonomyDecision: 'existing' as const,
+          operation: 'SELECT' as const,
+          dialect: 'generic' as const,
+          purpose: 'Find bookings',
+          suggestedFilename: 'find-bookings.sql',
+          tables: ['bookings'],
+          parameters: [],
+          risk: 'read-only' as const,
+          riskReasons: [],
+          confidence: 0.99,
+          reviewNotes: [],
+        },
+      },
+    ];
+    const plan = buildPlan('file:///workspace', 'config', config, [item], records, undefined, {
+      version: 1,
+      updatedAt: 'now',
+      entries: [
+        {
+          rawHash: 'unit-hash',
+          destination: 'modules/booking.sql',
+          sourceRelativePath: 'old-location.sql',
+          organizedAt: 'now',
+        },
+      ],
+    });
+    expect(plan.actions).toHaveLength(0);
+    expect(plan.skippedAlreadyOrganized).toBe(1);
+  });
 });

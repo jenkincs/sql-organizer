@@ -1,5 +1,12 @@
 import { OrganizerConfig } from '../config/config';
-import { ClassificationRecord, OrganizerPlan, PlanAction, SqlInventoryItem, TaxonomyState } from '../domain/models';
+import {
+  ClassificationRecord,
+  ModuleIndex,
+  OrganizerPlan,
+  PlanAction,
+  SqlInventoryItem,
+  TaxonomyState,
+} from '../domain/models';
 import { findSimilarities } from '../duplicate/similarityDetector';
 import { sanitizeFilename } from './filenameSanitizer';
 import { proposeCategory } from '../taxonomy/taxonomyService';
@@ -10,11 +17,25 @@ export function buildPlan(
   items: SqlInventoryItem[],
   records: ClassificationRecord[],
   taxonomy?: TaxonomyState,
+  moduleIndex?: ModuleIndex,
 ): OrganizerPlan {
   const byId = new Map(records.map((x) => [x.itemId, x.classification]));
   const destinations = new Set<string>();
   const taxonomyProposals = new Map<string, NonNullable<OrganizerPlan['taxonomyProposals']>[number]>();
-  const actions: PlanAction[] = items
+  const alreadyOrganized = new Set(
+    (moduleIndex?.entries ?? []).map((entry) => `${entry.rawHash}\u0000${entry.destination}`),
+  );
+  const eligibleItems = items.filter((item) => {
+    const classification = byId.get(item.id);
+    if (!classification || item.exactDuplicateGroupId) return Boolean(classification);
+    const category =
+      classification.confidence < config.classification.lowConfidenceThreshold
+        ? config.classification.unclassifiedFolder
+        : classification.category;
+    const destination = `${config.organization.moduleFolder.replace(/\/+$/, '')}/${sanitizeFilename(`${category}.sql`, config.naming.maxLength)}`;
+    return !alreadyOrganized.has(`${item.rawHash}\u0000${destination}`);
+  });
+  const actions: PlanAction[] = eligibleItems
     .filter((item) => byId.has(item.id))
     .map((item) => {
       const c = byId.get(item.id)!;
@@ -45,6 +66,7 @@ export function buildPlan(
         sourceUri: item.sourceFileUri ?? item.uri,
         sourceRelativePath: item.sourceFileRelativePath ?? item.relativePath,
         sourceRawHash: item.sourceFileRawHash ?? item.rawHash,
+        sourceUnitRawHash: item.rawHash,
         proposedCategory: category,
         proposedOperationFolder: op,
         proposedFilename: filename,
@@ -88,5 +110,6 @@ export function buildPlan(
     ],
     status: 'reviewing',
     taxonomyProposals: [...taxonomyProposals.values()],
+    skippedAlreadyOrganized: items.filter((item) => byId.has(item.id)).length - eligibleItems.length,
   };
 }

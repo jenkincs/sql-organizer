@@ -80,6 +80,7 @@ const configSchema = z.object({
     .object({
       mode: z.literal('module-files').default('module-files'),
       moduleFolder: z.string().default('modules'),
+      maxModuleFileBytes: z.number().int().positive().default(5_000_000),
     })
     .default({}),
   ai: z

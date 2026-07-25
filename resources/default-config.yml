@@ -17,6 +17,7 @@ splitting:
 organization:
   mode: module-files
   moduleFolder: modules
+  maxModuleFileBytes: 5000000
 classification:
   lowConfidenceThreshold: 0.70
   autoApproveThreshold: 0.95

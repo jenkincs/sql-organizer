@@ -110,14 +110,22 @@ export function buildTaxonomyState(
 /** Prevents a model from turning a source filename into a module name. */
 export function resolveModuleCategory(
   classification: SqlClassification,
-  item: Pick<SqlInventoryItem, 'tables'>,
+  item: Pick<SqlInventoryItem, 'tables'> & Partial<Pick<SqlInventoryItem, 'operation'>>,
   knownCategories: string[],
 ): SqlClassification {
   const category = categorySlug(classification.category);
-  if (plausibleModule(category)) return { ...classification, category };
   const known = knownCategories.filter((value) => plausibleModule(value) && value !== 'unknown');
   const tableTokens = item.tables.map((table) => categorySlug(table.split('.').at(-1) ?? table));
   const matched = known.find((candidate) => tableTokens.some((table) => singular(table) === singular(candidate)));
+  const reportingQuery =
+    item.operation === 'SELECT' && /\b(count|sum|avg|min|max|group by|having)\b/i.test(classification.purpose);
+  // The model gets the final say for a meaningful known module. For unknown and
+  // filename-shaped answers, use the primary SQL table deterministically. This
+  // keeps joins in one module instead of duplicating them across every table.
+  if (plausibleModule(category) && category !== 'unknown' && (known.includes(category) || !matched))
+    return { ...classification, category };
+  if (reportingQuery && known.includes('reporting'))
+    return { ...classification, category: 'reporting', taxonomyDecision: 'existing' };
   const fallback = matched ?? tableTokens.find(plausibleModule) ?? 'unknown';
   return {
     ...classification,

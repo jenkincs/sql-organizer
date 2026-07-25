@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added durable per-unit module indexing so future scans skip SQL that is already appended, including after a workspace relocation.
+- Grouped Review by generated module file and added a safe module reassignment control.
+- Excluded generated module files from the optional clean-Git Apply guard while preserving protection for user changes.
+- Added module file section markers and a configurable maximum module file size.
 - Changed organization output to one provenance-marked SQL file per business module under `modules/`.
 - Normalized the compatible `plpgsql` dialect label to `postgresql`.
 - Added adaptive local taxonomy discovery, proposal, approval, and persistence.

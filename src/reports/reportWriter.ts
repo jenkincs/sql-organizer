@@ -20,6 +20,7 @@ export async function writeReports(
     `- Exact duplicates: ${inventory.filter((x) => x.exactDuplicateGroupId).length}`,
     `- Similar candidates: ${plan?.similarityCandidates.length ?? 0}`,
     `- Proposed moves: ${plan?.actions.length ?? 0}`,
+    `- Already organized units skipped: ${plan?.skippedAlreadyOrganized ?? 0}`,
     '',
     '## Safety',
     '',

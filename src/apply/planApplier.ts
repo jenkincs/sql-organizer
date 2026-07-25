@@ -1,14 +1,14 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { OrganizerConfig } from '../config/config';
-import { OrganizerPlan, PlanAction, TaxonomyState } from '../domain/models';
+import { ModuleIndex, ModuleIndexEntry, OrganizerPlan, PlanAction, TaxonomyState } from '../domain/models';
 import { sha256, splitSqlStatements } from '../scanner/sqlAnalyzer';
 import { Repository } from '../storage/repository';
 import { checkGit, GitState } from './gitGuard';
 import { assertNoSymlink, safeDestination } from './pathGuard';
 
 export interface ApplyManifest {
-  version: 2;
+  version: 2 | 3;
   planId: string;
   extensionVersion: string;
   appliedAt: string;
@@ -17,6 +17,8 @@ export interface ApplyManifest {
   moves: { source: string; destination: string; sourceHashBefore: string; destinationHashAfter: string }[];
   writes: { destination: string; destinationHashAfter: string; existedBefore: boolean; previousContent?: string }[];
   taxonomyAdded: string[];
+  moduleIndexPath?: string;
+  moduleIndexAdded?: ModuleIndexEntry[];
   errors: string[];
 }
 
@@ -40,11 +42,17 @@ export class PlanApplier {
       this.root,
       this.config.safety.requireGitRepository,
       this.config.safety.requireCleanGitForApply,
-      [`${this.config.output.stateFolder}/**`, this.config.output.reportFile, this.config.output.indexFile],
+      [
+        `${this.config.output.stateFolder}/**`,
+        this.config.output.reportFile,
+        this.config.output.indexFile,
+        `${this.config.organization.moduleFolder.replace(/\/+$/, '')}/**`,
+      ],
     );
     const moves: ApplyManifest['moves'] = [];
     const writes: ApplyManifest['writes'] = [];
     const errors: string[] = [];
+    let moduleIndexAdded: ModuleIndexEntry[] = [];
     try {
       for (const action of actions) {
         const destination = safeDestination(this.root, action.finalDestination);
@@ -83,6 +91,7 @@ export class PlanApplier {
         });
       }
       await this.persistApprovedTaxonomy(plan);
+      moduleIndexAdded = await this.persistModuleIndex(actions);
       plan.status = 'applied';
     } catch (error) {
       errors.push(error instanceof Error ? error.message : String(error));
@@ -90,7 +99,7 @@ export class PlanApplier {
       plan.status = 'partially-applied';
     }
     const manifest: ApplyManifest = {
-      version: 2,
+      version: 3,
       planId: plan.id,
       extensionVersion: '0.2.0',
       appliedAt: new Date().toISOString(),
@@ -99,6 +108,8 @@ export class PlanApplier {
       moves,
       writes,
       taxonomyAdded: plan.taxonomyProposals?.map((proposal) => proposal.slug) ?? [],
+      moduleIndexPath: `${this.config.output.stateFolder}/module-index.json`,
+      moduleIndexAdded,
       errors,
     };
     await this.repository.writeManifest(`manifest-${Date.now()}.json`, manifest);
@@ -156,7 +167,7 @@ export class PlanApplier {
     writes: ApplyManifest['writes'],
   ): Promise<void> {
     const content = await this.extractContent(action);
-    const marker = `-- SQL Organizer: source=${action.sourceRelativePath} unit=${action.sourceUnitId ?? action.id} hash=${action.sourceRawHash}`;
+    const marker = `-- SQL Organizer: source=${action.sourceRelativePath} unit=${action.sourceUnitId ?? action.id} hash=${action.sourceUnitRawHash ?? action.sourceRawHash}`;
     let before = '';
     let existedBefore = false;
     try {
@@ -167,7 +178,11 @@ export class PlanApplier {
     }
     const prior = writes.find((write) => write.destination === action.finalDestination);
     if (before.includes(marker)) return;
-    const appended = `${before.trimEnd()}${before.trim() ? '\n\n' : ''}${marker}\n-- module=${action.finalCategory} operation=${action.proposedOperationFolder}\n${content.trim()}\n`;
+    const section = `-- SQL Organizer section: ${action.proposedOperationFolder}`;
+    const header = before.includes(section) ? '' : `${section}\n`;
+    const appended = `${before.trimEnd()}${before.trim() ? '\n\n' : ''}${header}${marker}\n-- module=${action.finalCategory} operation=${action.proposedOperationFolder}\n${content.trim()}\n`;
+    if (Buffer.byteLength(appended, 'utf8') > this.config.organization.maxModuleFileBytes)
+      throw new Error(`Module file exceeds organization.maxModuleFileBytes: ${action.finalDestination}`);
     await vscode.workspace.fs.writeFile(destination, Buffer.from(appended, 'utf8'));
     if (prior) prior.destinationHashAfter = sha256(appended);
     else
@@ -183,14 +198,12 @@ export class PlanApplier {
     plan: OrganizerPlan,
     actions: PlanAction[],
   ): { source: vscode.Uri; relativePath: string; rawHash: string; destination: string }[] {
-    const approvedSources = new Set(
-      actions.filter((action) => action.kind === 'extract' && action.archiveSource).map((action) => action.sourceUri),
-    );
+    const approvedSources = new Set(actions.filter((action) => action.archiveSource).map((action) => action.sourceUri));
     return [...approvedSources].flatMap((sourceUri) => {
       const sourceActions = plan.actions.filter((action) => action.sourceUri === sourceUri);
       if (
         !sourceActions.length ||
-        !sourceActions.every((action) => action.kind === 'extract' && action.status === 'approved')
+        !sourceActions.every((action) => action.kind === 'append' && action.status === 'approved')
       )
         return [];
       const action = sourceActions[0];
@@ -204,6 +217,33 @@ export class PlanApplier {
         },
       ];
     });
+  }
+
+  private async persistModuleIndex(actions: PlanAction[]): Promise<ModuleIndexEntry[]> {
+    const current = await this.repository.moduleIndex();
+    const entries = [...current.entries];
+    const added: ModuleIndexEntry[] = [];
+    for (const action of actions.filter((action) => action.status === 'applied' && action.kind === 'append')) {
+      if (
+        entries.some(
+          (entry) =>
+            entry.rawHash === (action.sourceUnitRawHash ?? action.sourceRawHash) &&
+            entry.destination === action.finalDestination,
+        )
+      )
+        continue;
+      const entry: ModuleIndexEntry = {
+        rawHash: action.sourceUnitRawHash ?? action.sourceRawHash,
+        destination: action.finalDestination,
+        sourceRelativePath: action.sourceRelativePath,
+        organizedAt: new Date().toISOString(),
+      };
+      entries.push(entry);
+      added.push(entry);
+    }
+    const index: ModuleIndex = { version: 1, entries, updatedAt: new Date().toISOString() };
+    await this.repository.saveModuleIndex(index);
+    return added;
   }
 
   private async persistApprovedTaxonomy(plan: OrganizerPlan): Promise<void> {

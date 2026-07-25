@@ -172,6 +172,7 @@ export function activate(context: vscode.ExtensionContext): void {
       inventory,
       currentClassifications,
       await repo.taxonomy(),
+      await repo.moduleIndex(),
     );
     if (inventory.length && !plan.actions.length) {
       const failedItems = inventory.filter((item) => item.classificationStatus === 'analysis-error');
