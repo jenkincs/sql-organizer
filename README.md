@@ -5,7 +5,7 @@ Local-first VS Code extension for scanning, classifying and safely organizing SQ
 ## Workflow
 
 1. Run **SQL Organizer: Initialize**.
-2. Run **Scan**, then configure an OpenAI model and set its key in SecretStorage. Optionally configure an OpenAI-compatible Base URL and select either the `responses` or `chat-completions` protocol.
+2. Run **Scan**, then configure one or more OpenAI models and set its key in SecretStorage. Optionally configure an OpenAI-compatible Base URL and select either the `responses` or `chat-completions` protocol.
 3. Run **Analyze** and **Create Plan**.
 4. Review, edit, approve or reject each move in the Review panel.
 5. Run **Apply Approved Plan** and use **Roll Back Last Apply** if safe preconditions still hold.

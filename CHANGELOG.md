@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.2
+
+- Added multi-model selection for a single configured AI endpoint.
+- Included the selected model in classification cache keys.
+
 ## 0.1.1
 
 - Added configurable OpenAI-compatible Base URL support.

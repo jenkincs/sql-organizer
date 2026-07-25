@@ -13,6 +13,8 @@ classification:
 ai:
   provider: openai
   model: ""
+  # Optional model list for this endpoint. Analyze prompts for a model when multiple entries exist.
+  models: []
   # Optional. Example: https://api.openai.com/v1 or http://localhost:11434/v1
   baseUrl: ""
   # "responses" for OpenAI Responses API; "chat-completions" for compatible endpoints.

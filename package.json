@@ -2,7 +2,7 @@
   "name": "sql-organizer",
   "displayName": "SQL Organizer",
   "description": "A safe, local-first SQL file knowledge-base organizer.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "publisher": "sql-organizer",
   "license": "MIT",
@@ -39,6 +39,7 @@
       "properties": {
         "sqlOrganizer.apiProvider": { "type": "string", "default": "openai", "enum": ["openai"], "description": "AI provider." },
         "sqlOrganizer.model": { "type": "string", "default": "", "description": "Model used for SQL classification." },
+        "sqlOrganizer.models": { "type": "array", "default": [], "items": { "type": "string" }, "description": "Models available at the configured endpoint. Analyze prompts for a choice when more than one model is configured." },
         "sqlOrganizer.baseUrl": { "type": "string", "default": "", "description": "Optional OpenAI-compatible API base URL. It must not include credentials, a query string, or a fragment." },
         "sqlOrganizer.apiProtocol": { "type": "string", "default": "responses", "enum": ["responses", "chat-completions"], "description": "AI API protocol. Use Responses for the OpenAI Responses API; use Chat Completions for compatible providers that do not implement Responses." },
         "sqlOrganizer.sqlRoot": { "type": "string", "default": "", "description": "Workspace-relative SQL root." },
