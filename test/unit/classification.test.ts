@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classificationSchema } from '../../src/ai/responseValidator';
+import { classificationSchema, normalizeClassificationResponse } from '../../src/ai/responseValidator';
 import { retryableAiError, safeAiErrorMessage } from '../../src/ai/classificationRecovery';
 describe('classification schema', () =>
   it('rejects unsafe filenames and invalid responses', () => {
@@ -31,5 +31,34 @@ describe('classification recovery', () => {
     expect(safeAiErrorMessage(new Error('Request rejected sk-abcdefghijklmnopqrstuvwxyz123456'))).toContain(
       '[redacted]',
     );
+  });
+});
+
+describe('classification response normalization', () => {
+  it('normalizes common model variants without weakening persisted safety values', () => {
+    const normalized = classificationSchema.parse(
+      normalizeClassificationResponse(
+        {
+          category: 'reporting',
+          operation: 'GRANT',
+          dialect: 'Postgres',
+          purpose: 'Grant reporting access',
+          suggestedFilename: 'Grant Reporting Access.SQL',
+          tables: [],
+          parameters: [],
+          risk: 'medium',
+          riskReasons: [],
+          confidence: 0.8,
+          reviewNotes: [],
+          providerSpecificField: true,
+        },
+        'UNKNOWN',
+      ),
+    );
+    expect(normalized.operation).toBe('DDL');
+    expect(normalized.dialect).toBe('postgresql');
+    expect(normalized.risk).toBe('unknown');
+    expect(normalized.suggestedFilename).toBe('grant-reporting-access.sql');
+    expect(normalized.riskReasons[0]).toContain('unsupported risk value');
   });
 });

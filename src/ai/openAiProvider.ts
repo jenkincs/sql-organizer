@@ -1,7 +1,7 @@
 import OpenAI from 'openai';
 import { AiProvider, ClassificationInput } from './aiProvider';
 import { SqlClassification } from '../domain/models';
-import { classificationSchema } from './responseValidator';
+import { classificationSchema, normalizeClassificationResponse } from './responseValidator';
 
 export type OpenAiProtocol = 'responses' | 'chat-completions';
 export interface OpenAiProviderOptions {
@@ -52,7 +52,7 @@ export class OpenAiProvider implements AiProvider {
       this.protocol === 'responses'
         ? await this.classifyWithResponses(input)
         : await this.classifyWithChatCompletions(input);
-    return classificationSchema.parse(JSON.parse(content));
+    return classificationSchema.parse(normalizeClassificationResponse(JSON.parse(content), input.operation));
   }
   async testConnection(): Promise<void> {
     if (!this.options.model) throw new Error('Select a model before testing the connection.');
