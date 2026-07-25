@@ -28,6 +28,7 @@ export class OpenAiProvider implements AiProvider {
     const content = this.protocol === 'responses' ? await this.classifyWithResponses(input) : await this.classifyWithChatCompletions(input);
     return classificationSchema.parse(JSON.parse(content));
   }
+  async testConnection(): Promise<void> { if (!this.options.model) throw new Error('Select a model before testing the connection.'); if (this.protocol === 'responses') { const response = await this.client.responses.create({ model: this.options.model, store: false, input: 'Reply with OK.', max_output_tokens: 16 }); if (!response.output_text) throw new Error('The endpoint returned no text.'); return; } const response = await this.client.chat.completions.create({ model: this.options.model, messages: [{ role: 'user', content: 'Reply with OK.' }], max_tokens: 16 }); if (!response.choices[0]?.message.content) throw new Error('The endpoint returned no text.'); }
   private async classifyWithResponses(input: ClassificationInput): Promise<string> {
     const response = await this.client.responses.create({ model: this.options.model, store: false, instructions: systemPrompt, input: JSON.stringify(input), text: { format: { type: 'json_object' } } });
     if (!response.output_text) throw new Error('The AI returned an empty Responses API output.');

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.3
+
+- Added an in-extension LLM Configuration Webview with endpoint, protocol, model, API key, and connection-test controls.
+- Kept advanced generation settings in the YAML configuration file.
+
 ## 0.1.2
 
 - Added multi-model selection for a single configured AI endpoint.

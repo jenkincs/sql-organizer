@@ -13,6 +13,7 @@ import { ReviewPanel } from './views/review/reviewPanel';
 import { PlanApplier } from './apply/planApplier';
 import { rollbackLast } from './apply/rollbackService';
 import { ApplyManifest } from './apply/planApplier';
+import { LlmConfigPanel } from './views/llmConfigPanel';
 
 export function activate(context: vscode.ExtensionContext): void {
   const logger = new Logger();
@@ -41,7 +42,7 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.openReport', async () => { const folder = root(); if (folder) await vscode.window.showTextDocument(vscode.Uri.joinPath(folder, (await loadConfig(folder)).output.reportFile)); }));
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.regenerateIndex', async () => { const folder = root(); const repo = await repository(); if (folder && repo) await writeReports(folder, await loadConfig(folder), await repo.inventory(), await repo.classifications(), await repo.plan()); }));
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.openFile', async (uri: string) => vscode.window.showTextDocument(vscode.Uri.parse(uri))));
-  context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.configure', () => vscode.commands.executeCommand('workbench.action.openSettings', '@ext:sql-organizer.sql-organizer')));
+  context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.configure', async () => { const folder = root(); if (!folder) return void vscode.window.showErrorMessage('Open a workspace folder before configuring LLM access.'); await LlmConfigPanel.open(context, folder); }));
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.approveItem', async (id: string) => { const repo = await repository(); const plan = await repo?.plan(); const action = plan?.actions.find((x) => x.id === id); if (repo && plan && action && !action.validationErrors.length) { action.status = 'approved'; await repo.savePlan(plan); refresh(); } }));
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.rejectItem', async (id: string) => { const repo = await repository(); const plan = await repo?.plan(); const action = plan?.actions.find((x) => x.id === id); if (repo && plan && action) { action.status = 'rejected'; await repo.savePlan(plan); refresh(); } }));
   context.subscriptions.push(vscode.commands.registerCommand('sqlOrganizer.approveAllSafe', async () => { const repo = await repository(); const plan = await repo?.plan(); if (repo && plan) { plan.actions.filter((x) => !x.validationErrors.length && x.confidence >= .95 && x.risk === 'read-only').forEach((x) => { x.status = 'approved'; }); await repo.savePlan(plan); refresh(); } }));
