@@ -78,7 +78,9 @@ export class OpenAiProvider implements AiProvider {
       model: this.options.model,
       store: false,
       instructions: systemPrompt,
-      input: JSON.stringify(input),
+      // Some OpenAI-compatible Responses endpoints inspect only `input` when
+      // enforcing json_object mode, so keep this explicit instruction here too.
+      input: `Return JSON only. ${JSON.stringify(input)}`,
       text: { format: { type: 'json_object' } },
     });
     if (!response.output_text) throw new Error('The AI returned an empty Responses API output.');

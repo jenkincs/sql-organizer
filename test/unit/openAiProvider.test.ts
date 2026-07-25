@@ -46,7 +46,12 @@ describe('OpenAI endpoint support', () => {
       client as never,
     );
     await expect(provider.classify(input)).resolves.toMatchObject(valid);
-    expect(request).toMatchObject({ model: 'model', store: false, text: { format: { type: 'json_object' } } });
+    expect(request).toMatchObject({
+      model: 'model',
+      store: false,
+      input: expect.stringMatching(/json/i),
+      text: { format: { type: 'json_object' } },
+    });
   });
   it('uses Chat Completions when explicitly selected', async () => {
     let request: unknown;
