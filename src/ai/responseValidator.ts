@@ -33,6 +33,19 @@ function operation(value: unknown, fallback: SqlOperation): (typeof operations)[
   return fallback;
 }
 
+function confidence(value: unknown): number {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.min(1, Math.max(0, value));
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    const levels: Record<string, number> = { low: 0.4, medium: 0.65, high: 0.85 };
+    if (normalized in levels) return levels[normalized];
+    const numeric = Number(normalized.replace(/%$/, ''));
+    if (Number.isFinite(numeric)) return Math.min(1, Math.max(0, normalized.endsWith('%') ? numeric / 100 : numeric));
+  }
+  // Unknown confidence must never enable auto-approval.
+  return 0.5;
+}
+
 /** Normalizes common provider/model variants before applying the strict persisted schema. */
 export function normalizeClassificationResponse(value: unknown, fallbackOperation: SqlOperation): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
@@ -43,8 +56,6 @@ export function normalizeClassificationResponse(value: unknown, fallbackOperatio
   const riskReasons = stringArray(raw.riskReasons);
   if (rawRisk && risk === 'unknown' && rawRisk !== 'unknown')
     riskReasons.push(`AI returned unsupported risk value "${rawRisk}"; treated as unknown for safety.`);
-  const confidence =
-    typeof raw.confidence === 'number' ? Math.min(1, Math.max(0, raw.confidence)) : Number(raw.confidence);
   return {
     category: typeof raw.category === 'string' ? raw.category.trim() : raw.category,
     operation: normalizedOperation,
@@ -59,7 +70,7 @@ export function normalizeClassificationResponse(value: unknown, fallbackOperatio
     parameters: stringArray(raw.parameters),
     risk,
     riskReasons,
-    confidence,
+    confidence: confidence(raw.confidence),
     reviewNotes: stringArray(raw.reviewNotes),
   };
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Normalize `low`, `medium`, `high`, numeric-string, and percentage confidence values returned by compatible models.
+
 ## 0.1.9
 
 - Fixed Responses-compatible endpoints that require an explicit JSON instruction in the request input when JSON-object mode is enabled.

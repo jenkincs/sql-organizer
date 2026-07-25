@@ -2,7 +2,7 @@
   "name": "sql-organizer",
   "displayName": "SQL Organizer",
   "description": "A safe, local-first SQL file knowledge-base organizer.",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "publisher": "sql-organizer",
   "license": "MIT",

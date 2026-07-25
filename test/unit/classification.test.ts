@@ -48,7 +48,7 @@ describe('classification response normalization', () => {
           parameters: [],
           risk: 'medium',
           riskReasons: [],
-          confidence: 0.8,
+          confidence: 'high',
           reviewNotes: [],
           providerSpecificField: true,
         },
@@ -59,6 +59,7 @@ describe('classification response normalization', () => {
     expect(normalized.dialect).toBe('postgresql');
     expect(normalized.risk).toBe('unknown');
     expect(normalized.suggestedFilename).toBe('grant-reporting-access.sql');
+    expect(normalized.confidence).toBe(0.85);
     expect(normalized.riskReasons[0]).toContain('unsupported risk value');
   });
 });
