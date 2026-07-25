@@ -73,7 +73,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(
     vscode.commands.registerCommand('sqlOrganizer.openDocumentation', () =>
-      vscode.env.openExternal(vscode.Uri.parse('https://github.com/sql-organizer/sql-organizer#readme')),
+      vscode.env.openExternal(vscode.Uri.parse('https://github.com/jenkincs/sql-organizer#readme')),
     ),
   );
   context.subscriptions.push(
