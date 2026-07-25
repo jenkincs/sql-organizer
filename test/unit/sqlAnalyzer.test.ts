@@ -60,4 +60,8 @@ describe('conservative statement splitting', () => {
   it('keeps malformed quoted SQL together instead of guessing a boundary', () => {
     expect(splitSqlStatements("SELECT 'unfinished;\nUPDATE users SET active = false;")[0].safety).toBe('ambiguous');
   });
+  it('keeps batch and custom-delimiter scripts together', () => {
+    expect(splitSqlStatements('SELECT 1;\nGO\nSELECT 2;')[0].safety).toBe('keep-together');
+    expect(splitSqlStatements('DELIMITER $$\nCREATE PROCEDURE p() SELECT 1$$')[0].safety).toBe('keep-together');
+  });
 });

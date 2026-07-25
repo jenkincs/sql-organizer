@@ -6,6 +6,7 @@
 - Grouped Review by generated module file and added a safe module reassignment control.
 - Excluded generated module files from the optional clean-Git Apply guard while preserving protection for user changes.
 - Added module file section markers and a configurable maximum module file size.
+- Kept SQL Server batch-delimited and MySQL custom-delimiter scripts together during conservative splitting.
 - Changed organization output to one provenance-marked SQL file per business module under `modules/`.
 - Normalized the compatible `plpgsql` dialect label to `postgresql`.
 - Added adaptive local taxonomy discovery, proposal, approval, and persistence.

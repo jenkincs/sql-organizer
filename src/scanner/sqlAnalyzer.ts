@@ -17,7 +17,17 @@ export function splitSqlStatements(sql: string, maxStatements = 200): SqlStateme
   const single = (safety: SqlStatementFragment['safety']): SqlStatementFragment[] => [
     { sql, index: 0, startLine: 1, endLine: sql.split('\n').length, safety },
   ];
-  if (!sql.trim() || proceduralOrTransactional.test(maskSql(sql))) return single('keep-together');
+  const masked = maskSql(sql);
+  // Batch delimiters and custom delimiters have dialect-specific semantics. Keep
+  // their files intact rather than accidentally sending `GO` or a procedure body
+  // to a different module as if it were standalone SQL.
+  if (
+    !sql.trim() ||
+    proceduralOrTransactional.test(masked) ||
+    /^\s*GO(?:\s+\d+)?\s*(?:--.*)?$/im.test(masked) ||
+    /^\s*DELIMITER\s+\S+/im.test(masked)
+  )
+    return single('keep-together');
   const boundaries: { end: number; line: number }[] = [];
   let state: 'plain' | 'single' | 'double' | 'backtick' | 'bracket' | 'line-comment' | 'block-comment' | 'dollar' =
     'plain';
