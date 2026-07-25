@@ -19,6 +19,9 @@ const configSchema = z.object({
       categories: z
         .array(z.string().min(1))
         .default(['customer', 'booking', 'invoice', 'access', 'login', 'reporting', 'operations', 'system', 'unknown']),
+      mode: z.enum(['fixed', 'adaptive']).default('adaptive'),
+      allowNewCategories: z.boolean().default(true),
+      maxContextExamples: z.number().int().positive().max(50).default(12),
       operationFolders: z.record(z.string()).default({
         SELECT: 'query',
         INSERT: 'dml',
@@ -63,6 +66,14 @@ const configSchema = z.object({
       style: z.literal('kebab-case').default('kebab-case'),
       maxLength: z.number().int().positive().default(80),
       includePrimaryTable: z.boolean().default(false),
+    })
+    .default({}),
+  splitting: z
+    .object({
+      enabled: z.boolean().default(true),
+      archiveOriginalAfterSplit: z.boolean().default(false),
+      maxStatementsPerFile: z.number().int().positive().max(1000).default(200),
+      keepProceduralBlocksTogether: z.literal(true).default(true),
     })
     .default({}),
   ai: z

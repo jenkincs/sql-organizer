@@ -1,6 +1,9 @@
 export type SqlOperation = 'SELECT' | 'INSERT' | 'UPDATE' | 'DELETE' | 'MERGE' | 'DDL' | 'PLSQL' | 'UNKNOWN';
 export type SqlDialect = 'oracle' | 'postgresql' | 'mysql' | 'sqlserver' | 'sqlite' | 'generic' | 'unknown';
 export type SqlRisk = 'read-only' | 'write' | 'schema-change' | 'dynamic' | 'unknown';
+export type SqlUnitKind = 'file' | 'statement';
+export type TaxonomyDecision = 'existing' | 'proposed' | 'unknown';
+export type PlanActionKind = 'move' | 'extract' | 'archive' | 'create-category';
 export interface SqlInventoryItem {
   id: string;
   uri: string;
@@ -18,6 +21,14 @@ export interface SqlInventoryItem {
   exactDuplicateGroupId?: string;
   classificationStatus: 'not-analyzed' | 'analyzed' | 'analysis-error' | 'stale';
   classificationError?: { message: string; retryable: boolean; occurredAt: string };
+  unitKind?: SqlUnitKind;
+  sourceFileUri?: string;
+  sourceFileRelativePath?: string;
+  sourceFileRawHash?: string;
+  statementIndex?: number;
+  startLine?: number;
+  endLine?: number;
+  splitSafety?: 'safe' | 'keep-together' | 'ambiguous';
 }
 export interface SqlClassification {
   category: string;
@@ -31,6 +42,8 @@ export interface SqlClassification {
   riskReasons: string[];
   confidence: number;
   reviewNotes: string[];
+  relatedCategories?: string[];
+  taxonomyDecision?: TaxonomyDecision;
 }
 export interface ClassificationRecord {
   itemId: string;
@@ -43,6 +56,24 @@ export interface SimilarityCandidate {
   rightId: string;
   score: number;
   reason: string;
+}
+export interface TaxonomyEntry {
+  slug: string;
+  label: string;
+  source: 'configured' | 'discovered' | 'approved';
+  examples: { relativePath: string; purpose: string; tables: string[] }[];
+  createdAt: string;
+}
+export interface TaxonomyState {
+  version: 1;
+  entries: TaxonomyEntry[];
+  updatedAt: string;
+}
+export interface TaxonomyProposal {
+  slug: string;
+  label: string;
+  reason: string;
+  actionId?: string;
 }
 export interface PlanAction {
   id: string;
@@ -65,9 +96,16 @@ export interface PlanAction {
   userModified: boolean;
   userNote?: string;
   validationErrors: string[];
+  kind?: PlanActionKind;
+  sourceUnitId?: string;
+  sourceStartLine?: number;
+  sourceEndLine?: number;
+  content?: string;
+  archiveSource?: boolean;
+  taxonomyProposal?: TaxonomyProposal;
 }
 export interface OrganizerPlan {
-  version: 1;
+  version: 1 | 2;
   id: string;
   rootUri: string;
   createdAt: string;
@@ -77,4 +115,5 @@ export interface OrganizerPlan {
   similarityCandidates: SimilarityCandidate[];
   warnings: string[];
   status: 'draft' | 'reviewing' | 'ready' | 'partially-applied' | 'applied' | 'stale';
+  taxonomyProposals?: TaxonomyProposal[];
 }

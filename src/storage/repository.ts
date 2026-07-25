@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { OrganizerConfig } from '../config/config';
-import { ClassificationRecord, OrganizerPlan, SqlInventoryItem } from '../domain/models';
+import { ClassificationRecord, OrganizerPlan, SqlInventoryItem, TaxonomyState } from '../domain/models';
+import { migrateClassifications, migrateInventory, migratePlan } from './stateMigration';
 export class Repository {
   constructor(
     private readonly root: vscode.Uri,
@@ -25,22 +26,28 @@ export class Repository {
     await vscode.workspace.fs.writeFile(this.state(name), Buffer.from(JSON.stringify(value, null, 2), 'utf8'));
   }
   inventory(): Promise<SqlInventoryItem[]> {
-    return this.read(this.config.output.inventoryFile, []);
+    return this.read<unknown>(this.config.output.inventoryFile, []).then(migrateInventory);
   }
   saveInventory(items: SqlInventoryItem[]): Promise<void> {
     return this.write(this.config.output.inventoryFile, items);
   }
   classifications(): Promise<ClassificationRecord[]> {
-    return this.read(this.config.output.classificationsFile, []);
+    return this.read<unknown>(this.config.output.classificationsFile, []).then(migrateClassifications);
   }
   saveClassifications(records: ClassificationRecord[]): Promise<void> {
     return this.write(this.config.output.classificationsFile, records);
   }
   plan(): Promise<OrganizerPlan | undefined> {
-    return this.read<OrganizerPlan | undefined>(this.config.output.planFile, undefined);
+    return this.read<unknown>(this.config.output.planFile, undefined).then(migratePlan);
   }
   savePlan(plan: OrganizerPlan): Promise<void> {
     return this.write(this.config.output.planFile, plan);
+  }
+  taxonomy(): Promise<TaxonomyState | undefined> {
+    return this.read<TaxonomyState | undefined>('taxonomy.json', undefined);
+  }
+  saveTaxonomy(state: TaxonomyState): Promise<void> {
+    return this.write('taxonomy.json', state);
   }
   async writeManifest(name: string, value: unknown): Promise<void> {
     return this.write(`${this.config.output.manifestFolder}/${name}`, value);

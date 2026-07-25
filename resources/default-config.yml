@@ -4,6 +4,16 @@ root:
   exclude: ['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**']
   inbox: ['inbox/**']
   maxFileBytes: 300000
+taxonomy:
+  mode: adaptive
+  allowNewCategories: true
+  maxContextExamples: 12
+  categories: [customer, booking, invoice, access, login, reporting, operations, system, unknown]
+splitting:
+  enabled: true
+  archiveOriginalAfterSplit: false
+  maxStatementsPerFile: 200
+  keepProceduralBlocksTogether: true
 classification:
   lowConfidenceThreshold: 0.70
   autoApproveThreshold: 0.95
