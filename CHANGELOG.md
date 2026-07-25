@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- Added global multi-endpoint profiles, per-endpoint SecretStorage keys, model selection, and connection testing in the configuration Webview.
+- Made classification concurrent, retryable, cancellable, checkpointed, and safely diagnosable.
+- Expanded Review with category, operation, risk, confidence, and duplicate filters; full details; and editable plan fields.
+- Added multi-root workspace selection, scalable similarity candidate bucketing, and performance coverage.
+- Prevented Initialize from overwriting existing configuration and aligned documentation, repository metadata, and formatting checks.
+
 ## 0.1.4
 
 - Create the default configuration file before opening it in a new workspace.

@@ -1,8 +1,8 @@
 version: 1
 root:
-  include: ["**/*.sql"]
-  exclude: [".git/**", ".sql-organizer/**", "node_modules/**", "duplicates/**", "archive/**"]
-  inbox: ["inbox/**"]
+  include: ['**/*.sql']
+  exclude: ['.git/**', '.sql-organizer/**', 'node_modules/**', 'duplicates/**', 'archive/**']
+  inbox: ['inbox/**']
   maxFileBytes: 300000
 classification:
   lowConfidenceThreshold: 0.70
@@ -12,11 +12,11 @@ classification:
   unclassifiedFolder: unclassified
 ai:
   provider: openai
-  model: ""
+  model: ''
   # Optional model list for this endpoint. Analyze prompts for a model when multiple entries exist.
   models: []
   # Optional. Example: https://api.openai.com/v1 or http://localhost:11434/v1
-  baseUrl: ""
+  baseUrl: ''
   # "responses" for OpenAI Responses API; "chat-completions" for compatible endpoints.
   apiProtocol: responses
 safety:

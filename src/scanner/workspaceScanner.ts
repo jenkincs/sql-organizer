@@ -3,5 +3,67 @@ import * as vscode from 'vscode';
 import { OrganizerConfig } from '../config/config';
 import { SqlInventoryItem } from '../domain/models';
 import { assignExactDuplicateGroups } from '../duplicate/exactDuplicateDetector';
-import { detectDialect, detectOperation, extractParameters, extractTables, normalizeSql, sha256 } from './sqlAnalyzer';
-export async function scanWorkspace(root: vscode.Uri, config: OrganizerConfig, token?: vscode.CancellationToken): Promise<SqlInventoryItem[]> { const include = new vscode.RelativePattern(root, `{${config.root.include.join(',')}}`); const exclude = `{${config.root.exclude.join(',')}}`; const uris = await vscode.workspace.findFiles(include, exclude); const items: SqlInventoryItem[] = []; for (const uri of uris) { if (token?.isCancellationRequested) break; const stat = await vscode.workspace.fs.stat(uri); const relativePath = path.posix.relative(root.path, uri.path); const warnings: string[] = []; if (stat.size > config.root.maxFileBytes) { warnings.push('file-too-large'); items.push({ id: sha256(uri.toString()), uri: uri.toString(), relativePath, sizeBytes: stat.size, modifiedAt: stat.mtime, rawHash: '', normalizedHash: '', operation: 'UNKNOWN', dialectHint: 'unknown', tables: [], parameters: [], warnings, classificationStatus: 'not-analyzed' }); continue; } const text = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8'); items.push({ id: sha256(uri.toString()), uri: uri.toString(), relativePath, sizeBytes: stat.size, modifiedAt: stat.mtime, rawHash: sha256(text), normalizedHash: sha256(normalizeSql(text)), operation: detectOperation(text), dialectHint: detectDialect(text), tables: extractTables(text), parameters: extractParameters(text), warnings, classificationStatus: 'not-analyzed' }); } assignExactDuplicateGroups(items); return items; }
+import {
+  detectDialect,
+  detectOperation,
+  extractParameters,
+  extractTables,
+  normalizeSql,
+  normalizedTokenSignature,
+  sha256,
+} from './sqlAnalyzer';
+export async function scanWorkspace(
+  root: vscode.Uri,
+  config: OrganizerConfig,
+  token?: vscode.CancellationToken,
+): Promise<SqlInventoryItem[]> {
+  const include = new vscode.RelativePattern(root, `{${config.root.include.join(',')}}`);
+  const exclude = `{${config.root.exclude.join(',')}}`;
+  const uris = await vscode.workspace.findFiles(include, exclude);
+  const items: SqlInventoryItem[] = [];
+  for (const uri of uris) {
+    if (token?.isCancellationRequested) break;
+    const stat = await vscode.workspace.fs.stat(uri);
+    const relativePath = path.posix.relative(root.path, uri.path);
+    const warnings: string[] = [];
+    if (stat.size > config.root.maxFileBytes) {
+      warnings.push('file-too-large');
+      items.push({
+        id: sha256(uri.toString()),
+        uri: uri.toString(),
+        relativePath,
+        sizeBytes: stat.size,
+        modifiedAt: stat.mtime,
+        rawHash: '',
+        normalizedHash: '',
+        normalizedTokens: [],
+        operation: 'UNKNOWN',
+        dialectHint: 'unknown',
+        tables: [],
+        parameters: [],
+        warnings,
+        classificationStatus: 'not-analyzed',
+      });
+      continue;
+    }
+    const text = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+    items.push({
+      id: sha256(uri.toString()),
+      uri: uri.toString(),
+      relativePath,
+      sizeBytes: stat.size,
+      modifiedAt: stat.mtime,
+      rawHash: sha256(text),
+      normalizedHash: sha256(normalizeSql(text)),
+      normalizedTokens: normalizedTokenSignature(text),
+      operation: detectOperation(text),
+      dialectHint: detectDialect(text),
+      tables: extractTables(text),
+      parameters: extractParameters(text),
+      warnings,
+      classificationStatus: 'not-analyzed',
+    });
+  }
+  assignExactDuplicateGroups(items);
+  return items;
+}

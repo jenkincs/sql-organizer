@@ -8,4 +8,7 @@ async function main() {
     launchArgs: [path.resolve(__dirname, '../fixtures/sql-workspace'), '--disable-workspace-trust'],
   });
 }
-main().catch((error) => { console.error(error); process.exit(1); });
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});
