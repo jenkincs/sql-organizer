@@ -11,6 +11,7 @@ import {
   normalizeSql,
   normalizedTokenSignature,
   sha256,
+  splitSqlStatements,
 } from './sqlAnalyzer';
 export async function scanWorkspace(
   root: vscode.Uri,
@@ -47,22 +48,40 @@ export async function scanWorkspace(
       continue;
     }
     const text = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
-    items.push({
-      id: sha256(uri.toString()),
-      uri: uri.toString(),
-      relativePath,
-      sizeBytes: stat.size,
-      modifiedAt: stat.mtime,
-      rawHash: sha256(text),
-      normalizedHash: sha256(normalizeSql(text)),
-      normalizedTokens: normalizedTokenSignature(text),
-      operation: detectOperation(text),
-      dialectHint: detectDialect(text),
-      tables: extractTables(text),
-      parameters: extractParameters(text),
-      warnings,
-      classificationStatus: 'not-analyzed',
-    });
+    const sourceHash = sha256(text);
+    const fragments = config.splitting.enabled ? splitSqlStatements(text, config.splitting.maxStatementsPerFile) : [];
+    const units =
+      fragments.length > 1
+        ? fragments
+        : [{ sql: text, index: 0, startLine: 1, endLine: text.split('\n').length, safety: 'keep-together' as const }];
+    for (const unit of units) {
+      const statement = unit.sql;
+      const isStatement = units.length > 1;
+      items.push({
+        id: sha256(`${uri.toString()}#${unit.index}:${sha256(statement)}`),
+        uri: uri.toString(),
+        relativePath: isStatement ? `${relativePath}#L${unit.startLine}-L${unit.endLine}` : relativePath,
+        sizeBytes: Buffer.byteLength(statement, 'utf8'),
+        modifiedAt: stat.mtime,
+        rawHash: sha256(statement),
+        normalizedHash: sha256(normalizeSql(statement)),
+        normalizedTokens: normalizedTokenSignature(statement),
+        operation: detectOperation(statement),
+        dialectHint: detectDialect(statement),
+        tables: extractTables(statement),
+        parameters: extractParameters(statement),
+        warnings,
+        classificationStatus: 'not-analyzed',
+        unitKind: isStatement ? 'statement' : 'file',
+        sourceFileUri: uri.toString(),
+        sourceFileRelativePath: relativePath,
+        sourceFileRawHash: sourceHash,
+        statementIndex: unit.index,
+        startLine: unit.startLine,
+        endLine: unit.endLine,
+        splitSafety: unit.safety,
+      });
+    }
   }
   assignExactDuplicateGroups(items);
   return items;

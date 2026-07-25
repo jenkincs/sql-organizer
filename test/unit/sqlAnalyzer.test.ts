@@ -6,6 +6,7 @@ import {
   extractTables,
   normalizeSql,
   normalizedTokenSignature,
+  splitSqlStatements,
 } from '../../src/scanner/sqlAnalyzer';
 import { redactSql } from '../../src/scanner/sqlRedactor';
 
@@ -40,5 +41,23 @@ describe('SQL analysis', () => {
     const redacted = redactSql("select 'joe@example.com', '10.2.3.4', token=abc");
     expect(redacted).not.toContain('joe@example.com');
     expect(redacted).not.toContain('10.2.3.4');
+  });
+});
+
+describe('conservative statement splitting', () => {
+  it('splits independent top-level statements while retaining comments and literals', () => {
+    const fragments = splitSqlStatements(
+      "-- find; customer\nSELECT ';' AS value;\n-- deactivate\nUPDATE users SET active = false;",
+    );
+    expect(fragments).toHaveLength(2);
+    expect(fragments[0].sql).toContain('-- find; customer');
+    expect(fragments[1].startLine).toBe(2);
+  });
+  it('keeps transaction and procedural content together', () => {
+    expect(splitSqlStatements('BEGIN\nUPDATE users SET active = false;\nEND;')).toHaveLength(1);
+    expect(splitSqlStatements('START TRANSACTION;\nUPDATE users SET active = false;\nCOMMIT;')).toHaveLength(1);
+  });
+  it('keeps malformed quoted SQL together instead of guessing a boundary', () => {
+    expect(splitSqlStatements("SELECT 'unfinished;\nUPDATE users SET active = false;")[0].safety).toBe('ambiguous');
   });
 });

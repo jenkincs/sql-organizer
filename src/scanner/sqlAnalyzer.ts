@@ -1,6 +1,121 @@
 import { createHash } from 'crypto';
 import { SqlDialect, SqlOperation } from '../domain/models';
 
+export interface SqlStatementFragment {
+  sql: string;
+  index: number;
+  startLine: number;
+  endLine: number;
+  safety: 'safe' | 'keep-together' | 'ambiguous';
+}
+
+const proceduralOrTransactional =
+  /^\s*(?:DECLARE|BEGIN\b|CREATE\s+(?:OR\s+REPLACE\s+)?(?:PROCEDURE|FUNCTION|PACKAGE|TRIGGER)\b|START\s+TRANSACTION\b|COMMIT\b|ROLLBACK\b|SAVEPOINT\b)/i;
+
+/** Splits simple top-level SQL only; uncertain, transactional, or procedural files stay intact. */
+export function splitSqlStatements(sql: string, maxStatements = 200): SqlStatementFragment[] {
+  const single = (safety: SqlStatementFragment['safety']): SqlStatementFragment[] => [
+    { sql, index: 0, startLine: 1, endLine: sql.split('\n').length, safety },
+  ];
+  if (!sql.trim() || proceduralOrTransactional.test(maskSql(sql))) return single('keep-together');
+  const boundaries: { end: number; line: number }[] = [];
+  let state: 'plain' | 'single' | 'double' | 'backtick' | 'bracket' | 'line-comment' | 'block-comment' | 'dollar' =
+    'plain';
+  let dollarTag = '';
+  let line = 1;
+  for (let index = 0; index < sql.length; index += 1) {
+    const char = sql[index];
+    const next = sql[index + 1];
+    if (char === '\n') line += 1;
+    if (state === 'line-comment') {
+      if (char === '\n') state = 'plain';
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (char === '*' && next === '/') {
+        state = 'plain';
+        index += 1;
+      }
+      continue;
+    }
+    if (state === 'single') {
+      if (char === "'" && next === "'") index += 1;
+      else if (char === "'") state = 'plain';
+      continue;
+    }
+    if (state === 'double') {
+      if (char === '"') state = 'plain';
+      continue;
+    }
+    if (state === 'backtick') {
+      if (char === '`') state = 'plain';
+      continue;
+    }
+    if (state === 'bracket') {
+      if (char === ']') state = 'plain';
+      continue;
+    }
+    if (state === 'dollar') {
+      if (sql.startsWith(dollarTag, index)) {
+        index += dollarTag.length - 1;
+        state = 'plain';
+      }
+      continue;
+    }
+    if (char === '-' && next === '-') {
+      state = 'line-comment';
+      index += 1;
+      continue;
+    }
+    if (char === '/' && next === '*') {
+      state = 'block-comment';
+      index += 1;
+      continue;
+    }
+    if (char === "'") {
+      state = 'single';
+      continue;
+    }
+    if (char === '"') {
+      state = 'double';
+      continue;
+    }
+    if (char === '`') {
+      state = 'backtick';
+      continue;
+    }
+    if (char === '[') {
+      state = 'bracket';
+      continue;
+    }
+    if (char === '$') {
+      const match = sql.slice(index).match(/^\$[A-Za-z_][A-Za-z0-9_]*\$|^\$\$/);
+      if (match) {
+        dollarTag = match[0];
+        state = 'dollar';
+        index += dollarTag.length - 1;
+        continue;
+      }
+    }
+    if (char === ';') boundaries.push({ end: index + 1, line });
+  }
+  if (state !== 'plain' || boundaries.length >= maxStatements) return single('ambiguous');
+  const fragments: SqlStatementFragment[] = [];
+  let start = 0;
+  let startLine = 1;
+  for (const boundary of boundaries) {
+    const fragment = sql.slice(start, boundary.end);
+    if (maskSql(fragment).trim())
+      fragments.push({ sql: fragment, index: fragments.length, startLine, endLine: boundary.line, safety: 'safe' });
+    start = boundary.end;
+    startLine = boundary.line;
+  }
+  const tail = sql.slice(start);
+  if (maskSql(tail).trim())
+    fragments.push({ sql: tail, index: fragments.length, startLine, endLine: sql.split('\n').length, safety: 'safe' });
+  return fragments.length > 1 ? fragments : single('keep-together');
+}
+
 /** Masks comments and literals while retaining offsets; this deliberately does not claim full dialect parsing. */
 export function maskSql(sql: string): string {
   let output = '';
