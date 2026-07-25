@@ -141,6 +141,8 @@ export class PlanApplier {
     const text = Buffer.from(await vscode.workspace.fs.readFile(source)).toString('utf8');
     const index = action.sourceStatementIndex;
     if (index === undefined && action.kind === 'append') return text;
+    if (action.kind === 'append' && action.sourceStartLine === 1 && action.sourceEndLine === text.split('\n').length)
+      return text;
     if (index === undefined) throw new Error(`Missing statement provenance: ${action.sourceRelativePath}`);
     const fragment = splitSqlStatements(text, this.config.splitting.maxStatementsPerFile)[index];
     if (!fragment || fragment.safety !== 'safe')

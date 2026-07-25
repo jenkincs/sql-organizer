@@ -74,6 +74,7 @@ describe('adaptive unit planning', () => {
     expect(plan.version).toBe(2);
     expect(plan.actions[0].kind).toBe('append');
     expect(plan.actions[0].finalDestination).toBe('modules/audit-log.sql');
+    expect(plan.actions[0].sourceStatementIndex).toBe(1);
     expect(plan.taxonomyProposals?.[0].slug).toBe('audit-log');
   });
 });
