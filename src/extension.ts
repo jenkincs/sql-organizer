@@ -469,7 +469,8 @@ export function activate(context: vscode.ExtensionContext): void {
             const items = await scanWorkspace(folder, config, token);
             const repo = new Repository(folder, config);
             await repo.saveInventory(items);
-            logger.info(`Scanned ${items.length} SQL file(s).`);
+            const sourceFileCount = new Set(items.map((item) => item.sourceFileRelativePath ?? item.relativePath)).size;
+            logger.info(`Scanned ${sourceFileCount} SQL source file(s), producing ${items.length} SQL unit(s).`);
             refresh();
             if (token.isCancellationRequested) {
               status.text = '$(database) SQL Organizer: Scan cancelled';
@@ -481,7 +482,9 @@ export function activate(context: vscode.ExtensionContext): void {
               status.text = '$(database) SQL Organizer: No SQL files found';
               return void vscode.window.showInformationMessage('SQL Organizer found no SQL files to organize.');
             }
-            progress.report({ message: `Classifying ${items.length} SQL file(s)…` });
+            progress.report({
+              message: `Classifying ${items.length} SQL unit(s) from ${sourceFileCount} source file(s)…`,
+            });
             const summary = await analyzeInventory(
               folder,
               config,
@@ -489,7 +492,7 @@ export function activate(context: vscode.ExtensionContext): void {
               token,
               ({ completed, total, item, outcome }) => {
                 progress.report({
-                  message: `Classifying ${completed}/${total}: ${item.relativePath}${outcome === 'failed' ? ' (failed)' : ''}`,
+                  message: `Classifying unit ${completed}/${total} (${sourceFileCount} source files): ${item.relativePath}${outcome === 'failed' ? ' (failed)' : ''}`,
                   increment: total ? 55 / total : 0,
                 });
               },
