@@ -4,7 +4,7 @@ import { Logger } from './logging/logger';
 import { Repository } from './storage/repository';
 import { scanWorkspace } from './scanner/workspaceScanner';
 import { OrganizerTreeProvider } from './views/treeProviders';
-import { ClassificationService } from './ai/classificationService';
+import { ClassificationProgress, ClassificationService, ClassificationSummary } from './ai/classificationService';
 import { OpenAiProvider } from './ai/openAiProvider';
 import { buildPlan } from './planning/planBuilder';
 import { writeReports } from './reports/reportWriter';
@@ -63,12 +63,34 @@ export function activate(context: vscode.ExtensionContext): void {
     library.refresh();
     issues.refresh();
   };
+  const reportOperationError = async (operation: string, error: unknown): Promise<void> => {
+    const detail = error instanceof Error ? error.message : String(error);
+    logger.error(`${operation} failed: ${detail}`);
+    status.text = '$(error) SQL Organizer: Action Failed';
+    refresh();
+    const choice = await vscode.window.showErrorMessage(`SQL Organizer ${operation} failed: ${detail}`, 'Open Output');
+    if (choice === 'Open Output') logger.show();
+  };
+  const reportClassificationFailures = async (summary: ClassificationSummary, repo: Repository): Promise<void> => {
+    if (!summary.failed) return;
+    const failedItems = (await repo.inventory()).filter((item) => item.classificationStatus === 'analysis-error');
+    const details = failedItems
+      .map((item) => `${item.relativePath}: ${item.classificationError?.message ?? 'Unknown classification error'}`)
+      .join('; ');
+    logger.warn(`${summary.failed} SQL classification${summary.failed === 1 ? '' : 's'} failed. ${details}`);
+    const choice = await vscode.window.showWarningMessage(
+      `${summary.failed} SQL file${summary.failed === 1 ? '' : 's'} could not be classified. Review contains only successful classifications.`,
+      'Open Output',
+    );
+    if (choice === 'Open Output') logger.show();
+  };
   const analyzeInventory = async (
     folder: vscode.Uri,
     config: Awaited<ReturnType<typeof loadConfig>>,
     repo: Repository,
     token?: vscode.CancellationToken,
-  ): Promise<boolean> => {
+    onProgress?: (progress: ClassificationProgress) => void,
+  ): Promise<ClassificationSummary | undefined> => {
     const store = new LlmSettingsStore(context.globalStorageUri);
     const settings = await store.get(config);
     const profile =
@@ -84,7 +106,7 @@ export function activate(context: vscode.ExtensionContext): void {
             )
           )?.item
         : store.active(settings);
-    if (!profile) return false;
+    if (!profile) return undefined;
     const key =
       (await context.secrets.get(profileSecretKey(profile.id))) ??
       (await context.secrets.get('sqlOrganizer.openaiApiKey'));
@@ -92,7 +114,7 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.window.showErrorMessage(
         'No API key is configured. Run “SQL Organizer: Configure”, save an API key, then run Scan again.',
       );
-      return false;
+      return undefined;
     }
     const model =
       profile.models.length > 1
@@ -105,7 +127,7 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.window.showErrorMessage(
         'No model is configured. Run “SQL Organizer: Configure”, add a model, then run Scan again.',
       );
-      return false;
+      return undefined;
     }
     const provider = new OpenAiProvider({
       apiKey: key,
@@ -114,11 +136,11 @@ export function activate(context: vscode.ExtensionContext): void {
       protocol: profile.apiProtocol,
       timeoutMs: config.ai.timeoutMs,
     });
-    await new ClassificationService(folder, config, repo, provider, `${profile.id}:${model}`).analyze(
+    return new ClassificationService(folder, config, repo, provider, `${profile.id}:${model}`).analyze(
       await repo.inventory(),
       token,
+      onProgress,
     );
-    return !token?.isCancellationRequested;
   };
   const createReviewPlan = async (
     folder: vscode.Uri,
@@ -231,7 +253,9 @@ export function activate(context: vscode.ExtensionContext): void {
         },
         async (_, token) => {
           const repo = new Repository(folder, config);
-          if (!(await analyzeInventory(folder, config, repo, token))) return;
+          const summary = await analyzeInventory(folder, config, repo, token);
+          if (!summary || summary.cancelled) return;
+          await reportClassificationFailures(summary, repo);
           status.text = '$(database) SQL Organizer: Analysis complete';
           refresh();
         },
@@ -401,26 +425,59 @@ export function activate(context: vscode.ExtensionContext): void {
           cancellable: true,
         },
         async (progress, token) => {
-          status.text = '$(sync~spin) SQL Organizer: Scanning';
-          const config = await loadConfig(folder);
-          progress.report({ message: 'Scanning SQL files…', increment: 20 });
-          const items = await scanWorkspace(folder, config, token);
-          const repo = new Repository(folder, config);
-          await repo.saveInventory(items);
-          logger.info(`Scanned ${items.length} SQL file(s).`);
-          refresh();
-          if (token.isCancellationRequested) return;
-          if (!items.length) {
-            status.text = '$(database) SQL Organizer: No SQL files found';
-            return void vscode.window.showInformationMessage('SQL Organizer found no SQL files to organize.');
+          try {
+            status.text = '$(sync~spin) SQL Organizer: Scanning';
+            const config = await loadConfig(folder);
+            progress.report({ message: 'Scanning SQL files…', increment: 20 });
+            const items = await scanWorkspace(folder, config, token);
+            const repo = new Repository(folder, config);
+            await repo.saveInventory(items);
+            logger.info(`Scanned ${items.length} SQL file(s).`);
+            refresh();
+            if (token.isCancellationRequested) {
+              status.text = '$(database) SQL Organizer: Scan cancelled';
+              return void vscode.window.showInformationMessage(
+                'SQL Organizer scan cancelled. Completed work was saved.',
+              );
+            }
+            if (!items.length) {
+              status.text = '$(database) SQL Organizer: No SQL files found';
+              return void vscode.window.showInformationMessage('SQL Organizer found no SQL files to organize.');
+            }
+            progress.report({ message: `Classifying ${items.length} SQL file(s)…` });
+            const summary = await analyzeInventory(
+              folder,
+              config,
+              repo,
+              token,
+              ({ completed, total, item, outcome }) => {
+                progress.report({
+                  message: `Classifying ${completed}/${total}: ${item.relativePath}${outcome === 'failed' ? ' (failed)' : ''}`,
+                  increment: total ? 55 / total : 0,
+                });
+              },
+            );
+            if (!summary) {
+              status.text = `$(database) SQL Organizer: ${items.length} scanned`;
+              return;
+            }
+            if (summary.cancelled) {
+              status.text = '$(database) SQL Organizer: Analysis cancelled';
+              return void vscode.window.showInformationMessage(
+                'SQL Organizer analysis cancelled. Completed classifications were saved.',
+              );
+            }
+            await reportClassificationFailures(summary, repo);
+            progress.report({ message: 'Creating review plan…', increment: 25 });
+            if (await createReviewPlan(folder, config, repo)) {
+              status.text = '$(database) SQL Organizer: Review Ready';
+              vscode.window.showInformationMessage(
+                `SQL Organizer created a plan from ${summary.analyzed + summary.cached} classification${summary.analyzed + summary.cached === 1 ? '' : 's'}.`,
+              );
+            }
+          } catch (error) {
+            await reportOperationError('Scan and Create Plan', error);
           }
-          progress.report({ message: 'Classifying SQL files…', increment: 55 });
-          if (!(await analyzeInventory(folder, config, repo, token))) {
-            status.text = `$(database) SQL Organizer: ${items.length} scanned`;
-            return;
-          }
-          progress.report({ message: 'Creating review plan…', increment: 25 });
-          await createReviewPlan(folder, config, repo);
         },
       );
     }),

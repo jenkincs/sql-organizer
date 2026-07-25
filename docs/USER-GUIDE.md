@@ -7,7 +7,7 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 1. Install the VSIX from a terminal:
 
    ```bash
-   code --install-extension sql-organizer-0.1.7.vsix
+   code --install-extension sql-organizer-0.1.8.vsix
    ```
 
 2. Open the workspace folder that contains the SQL files. In a multi-root workspace, run **SQL Organizer: Select Workspace Folder** and choose the SQL library to operate on.
@@ -15,6 +15,8 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 3. Open the Command Palette (`Cmd+Shift+P` on macOS or `Ctrl+Shift+P` on Windows/Linux) and run **SQL Organizer: Configure**. Add an endpoint profile, enter its Base URL, select its protocol, add one model ID per line, enter the API key, then click **Save**. Use **Test Connection** before scanning. Endpoint profiles are global to VS Code.
 
 4. Run **SQL Organizer: Scan and Create Plan**. This single command performs local SQL analysis, extracts metadata, detects duplicate candidates, sends redacted SQL for classification, generates a dry-run plan, report, and index, then opens the Review panel. It supports cancellation, retries transient failures, and saves progress after each item. It never modifies SQL files.
+
+   The VS Code progress notification shows the active phase and each classification as `current/total`. A cancelled run keeps completed work. If scanning, endpoint setup, or plan generation fails, SQL Organizer shows an actionable error notification and writes sanitized details to the **SQL Organizer** Output channel. Partial classification failures are shown as a warning and remain visible in the Issues view.
 
 5. Review every proposed action. Use filters for status, category, operation, risk, low confidence, and exact duplicates. Open details to inspect metadata and risk notes; edit the category, operation folder, filename, destination, or review note as needed. Approve or reject each action explicitly.
 

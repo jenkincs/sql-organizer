@@ -8,6 +8,22 @@ import { AiProvider } from './aiProvider';
 import { retryableAiError, safeAiErrorMessage } from './classificationRecovery';
 import { classificationSchema } from './responseValidator';
 
+export interface ClassificationProgress {
+  completed: number;
+  total: number;
+  item: SqlInventoryItem;
+  outcome: 'cached' | 'analyzed' | 'failed';
+}
+
+export interface ClassificationSummary {
+  total: number;
+  completed: number;
+  analyzed: number;
+  cached: number;
+  failed: number;
+  cancelled: boolean;
+}
+
 export class ClassificationService {
   constructor(
     private readonly root: vscode.Uri,
@@ -17,10 +33,19 @@ export class ClassificationService {
     private readonly model: string,
   ) {}
 
-  async analyze(items: SqlInventoryItem[], token?: vscode.CancellationToken): Promise<void> {
+  async analyze(
+    items: SqlInventoryItem[],
+    token?: vscode.CancellationToken,
+    onProgress?: (progress: ClassificationProgress) => void,
+  ): Promise<ClassificationSummary> {
     const records = await this.repository.classifications();
     const cache = new Map(records.map((record) => [record.cacheKey, record]));
+    const eligible = items.filter((item) => !item.warnings.includes('file-too-large'));
     let next = 0;
+    let completed = 0;
+    let analyzed = 0;
+    let cached = 0;
+    let failed = 0;
     let saveQueue: Promise<void> = Promise.resolve();
     const persist = (): Promise<void> => {
       saveQueue = saveQueue
@@ -31,12 +56,12 @@ export class ClassificationService {
         });
       return saveQueue;
     };
-    const classify = async (item: SqlInventoryItem): Promise<void> => {
+    const classify = async (item: SqlInventoryItem): Promise<'cached' | 'analyzed' | 'failed'> => {
       const key = sha256(`${item.rawHash}|v1|${JSON.stringify(this.config.taxonomy.categories)}|${this.model}`);
       if (cache.has(key)) {
         item.classificationStatus = 'analyzed';
         delete item.classificationError;
-        return;
+        return 'cached';
       }
       try {
         const sql = Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.parse(item.uri))).toString('utf8');
@@ -75,6 +100,8 @@ export class ClassificationService {
         cache.set(key, record);
         item.classificationStatus = 'analyzed';
         delete item.classificationError;
+        await persist();
+        return 'analyzed';
       } catch (error) {
         item.classificationStatus = 'analysis-error';
         item.classificationError = {
@@ -84,16 +111,29 @@ export class ClassificationService {
         };
       }
       await persist();
+      return 'failed';
     };
     const worker = async (): Promise<void> => {
       while (!token?.isCancellationRequested) {
-        const item = items[next++];
+        const item = eligible[next++];
         if (!item) return;
-        if (item.warnings.includes('file-too-large')) continue;
-        await classify(item);
+        const outcome = await classify(item);
+        completed += 1;
+        if (outcome === 'cached') cached += 1;
+        if (outcome === 'analyzed') analyzed += 1;
+        if (outcome === 'failed') failed += 1;
+        onProgress?.({ completed, total: eligible.length, item, outcome });
       }
     };
-    await Promise.all(Array.from({ length: Math.min(this.config.ai.concurrency, items.length) }, worker));
+    await Promise.all(Array.from({ length: Math.min(this.config.ai.concurrency, eligible.length) }, worker));
     await persist();
+    return {
+      total: eligible.length,
+      completed,
+      analyzed,
+      cached,
+      failed,
+      cancelled: Boolean(token?.isCancellationRequested),
+    };
   }
 }

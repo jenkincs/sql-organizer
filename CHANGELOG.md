@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.8
+
+- Added phase and per-file progress feedback to Scan and Create Plan.
+- Added clear cancellation, partial-classification, and unexpected-error notifications with sanitized Output-channel diagnostics.
+
 ## 0.1.7
 
 - Added a focused Workflow view to the SQL Organizer Activity Bar.
