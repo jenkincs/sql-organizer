@@ -1,0 +1,20 @@
+version: 1
+root:
+  include: ["**/*.sql"]
+  exclude: [".git/**", ".sql-organizer/**", "node_modules/**", "duplicates/**", "archive/**"]
+  inbox: ["inbox/**"]
+  maxFileBytes: 300000
+classification:
+  lowConfidenceThreshold: 0.70
+  autoApproveThreshold: 0.95
+  enableAutoApprove: false
+  unknownCategory: unknown
+  unclassifiedFolder: unclassified
+safety:
+  dryRunByDefault: true
+  requireGitRepository: false
+  requireCleanGitForApply: true
+  neverOverwrite: true
+  verifySourceHashBeforeApply: true
+  allowOutsideWorkspace: false
+  allowSymlinks: false

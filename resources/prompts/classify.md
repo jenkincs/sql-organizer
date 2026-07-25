@@ -1,0 +1,1 @@
+Classify the supplied redacted SQL using the metadata. Use a lowercase kebab-case filename ending in .sql. Treat DML, DDL, PL/SQL and dynamic SQL as risky. Do not infer business semantics without evidence.

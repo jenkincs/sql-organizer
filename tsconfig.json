@@ -1,0 +1,4 @@
+{
+  "compilerOptions": { "target": "ES2022", "module": "commonjs", "moduleResolution": "node", "lib": ["ES2022"], "rootDir": ".", "outDir": "dist", "strict": true, "esModuleInterop": true, "skipLibCheck": true, "sourceMap": true, "resolveJsonModule": true },
+  "include": ["src/**/*.ts", "test/**/*.ts", "esbuild.js", "vitest.config.ts"]
+}

@@ -1,0 +1,3 @@
+# Test Plan
+
+Unit coverage targets lexical SQL analysis, redaction, duplicate grouping, output schema and portable names. The Extension Host suite validates activation and command registration, then exercises Initialize → Scan → Create Plan → Review against an isolated fixture; it proves that the dry-run path does not mutate the SQL fixture. Further integration cases should retain the same temporary-workspace design for FakeAiProvider, approved Apply, manifest, rollback, changed-source and dirty-Git rejection. CI runs lint, typecheck, Vitest, Extension Host tests and VSIX packaging without real AI calls.

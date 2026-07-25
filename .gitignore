@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.vsix
+.sql-organizer/
+.vscode-test/
+test/fixtures/sql-workspace/sql-organizer.config.yml
+test/fixtures/sql-workspace/.sql-organizer/

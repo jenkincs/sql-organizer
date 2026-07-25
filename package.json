@@ -1,0 +1,66 @@
+{
+  "name": "sql-organizer",
+  "displayName": "SQL Organizer",
+  "description": "A safe, local-first SQL file knowledge-base organizer.",
+  "version": "0.1.0",
+  "private": true,
+  "publisher": "sql-organizer",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/sql-organizer/sql-organizer" },
+  "engines": { "vscode": "^1.95.0", "node": ">=20" },
+  "categories": ["Other"],
+  "main": "./dist/extension.js",
+  "icon": "media/sql-organizer-icon.png",
+  "activationEvents": ["onStartupFinished"],
+  "files": ["dist", "media", "resources", "README.md", "CHANGELOG.md", "LICENSE", "docs"],
+  "scripts": {
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "lint": "eslint src test --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:extension": "npm run build && node test/suite/runTest.js",
+    "test:watch": "vitest",
+    "package": "npm run build && npx @vscode/vsce package --no-dependencies",
+    "prepublishOnly": "npm run build"
+  },
+  "contributes": {
+    "commands": [
+      { "command": "sqlOrganizer.initialize", "title": "SQL Organizer: Initialize" }, { "command": "sqlOrganizer.selectRoot", "title": "SQL Organizer: Select SQL Root" }, { "command": "sqlOrganizer.scan", "title": "SQL Organizer: Scan" }, { "command": "sqlOrganizer.analyze", "title": "SQL Organizer: Analyze" }, { "command": "sqlOrganizer.createPlan", "title": "SQL Organizer: Create Plan" }, { "command": "sqlOrganizer.openReview", "title": "SQL Organizer: Open Review" }, { "command": "sqlOrganizer.applyApprovedPlan", "title": "SQL Organizer: Apply Approved Plan" }, { "command": "sqlOrganizer.regenerateIndex", "title": "SQL Organizer: Regenerate Index" }, { "command": "sqlOrganizer.detectDuplicates", "title": "SQL Organizer: Detect Duplicates" }, { "command": "sqlOrganizer.refreshViews", "title": "SQL Organizer: Refresh Views" }, { "command": "sqlOrganizer.configure", "title": "SQL Organizer: Configure" }, { "command": "sqlOrganizer.setApiKey", "title": "SQL Organizer: Set OpenAI API Key" }, { "command": "sqlOrganizer.clearApiKey", "title": "SQL Organizer: Clear OpenAI API Key" }, { "command": "sqlOrganizer.openConfig", "title": "SQL Organizer: Open Configuration" }, { "command": "sqlOrganizer.openReport", "title": "SQL Organizer: Open Report" }, { "command": "sqlOrganizer.openOutput", "title": "SQL Organizer: Open Output" }, { "command": "sqlOrganizer.rollbackLastApply", "title": "SQL Organizer: Roll Back Last Apply" }, { "command": "sqlOrganizer.openFile", "title": "SQL Organizer: Open File" }, { "command": "sqlOrganizer.approveItem", "title": "SQL Organizer: Approve Item" }, { "command": "sqlOrganizer.rejectItem", "title": "SQL Organizer: Reject Item" }, { "command": "sqlOrganizer.approveAllSafe", "title": "SQL Organizer: Approve All Safe" }
+    ],
+    "viewsContainers": { "activitybar": [{ "id": "sqlOrganizer", "title": "SQL Organizer", "icon": "media/sql-organizer.svg" }] },
+    "views": { "sqlOrganizer": [{ "id": "sqlOrganizer.overview", "name": "Overview" }, { "id": "sqlOrganizer.library", "name": "Library" }, { "id": "sqlOrganizer.issues", "name": "Issues" }] },
+    "viewsWelcome": [{ "view": "sqlOrganizer.overview", "contents": "No SQL Organizer configuration found.\\n[Initialize SQL Organizer](command:sqlOrganizer.initialize)\\n[Select SQL Root](command:sqlOrganizer.selectRoot)\\n[Open Documentation](command:sqlOrganizer.openDocumentation)", "when": "!workspaceFolderCount" }],
+    "walkthroughs": [{ "id": "sqlOrganizer.gettingStarted", "title": "Get started with SQL Organizer", "description": "Safely organize a local SQL knowledge base.", "steps": [{ "id": "initialize", "title": "Initialize", "description": "[Create a safe configuration](command:sqlOrganizer.initialize)." }, { "id": "scan", "title": "Scan SQL files", "description": "[Run a local scan](command:sqlOrganizer.scan)." }, { "id": "review", "title": "Review before applying", "description": "[Open Review](command:sqlOrganizer.openReview); no file is moved until explicit approval." }] }],
+    "configuration": {
+      "title": "SQL Organizer",
+      "properties": {
+        "sqlOrganizer.apiProvider": { "type": "string", "default": "openai", "enum": ["openai"], "description": "AI provider." },
+        "sqlOrganizer.model": { "type": "string", "default": "", "description": "Model used for SQL classification." },
+        "sqlOrganizer.sqlRoot": { "type": "string", "default": "", "description": "Workspace-relative SQL root." },
+        "sqlOrganizer.showStatusBar": { "type": "boolean", "default": true },
+        "sqlOrganizer.logLevel": { "type": "string", "default": "info", "enum": ["error", "warn", "info", "debug"] },
+        "sqlOrganizer.enableTelemetry": { "type": "boolean", "default": false, "description": "Reserved; telemetry is disabled by default." },
+        "sqlOrganizer.openReviewAfterPlan": { "type": "boolean", "default": true },
+        "sqlOrganizer.confirmBeforeApply": { "type": "boolean", "default": true }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/vscode": "^1.95.0",
+    "@typescript-eslint/eslint-plugin": "^8.18.0",
+    "@typescript-eslint/parser": "^8.18.0",
+    "@vscode/vsce": "^3.2.1",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.16.0",
+    "mocha": "^11.0.1",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "dependencies": { "openai": "^4.77.0", "yaml": "^2.6.1", "zod": "^3.24.1" }
+}
