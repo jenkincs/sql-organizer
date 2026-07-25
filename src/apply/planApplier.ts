@@ -33,6 +33,7 @@ export class PlanApplier {
       this.root,
       this.config.safety.requireGitRepository,
       this.config.safety.requireCleanGitForApply,
+      [`${this.config.output.stateFolder}/**`, this.config.output.reportFile, this.config.output.indexFile],
     );
     const moves: ApplyManifest['moves'] = [];
     const errors: string[] = [];

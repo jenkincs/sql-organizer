@@ -161,9 +161,29 @@ export function activate(context: vscode.ExtensionContext): void {
       currentClassifications,
     );
     if (inventory.length && !plan.actions.length) {
-      vscode.window.showErrorMessage(
-        'No plan was created because every SQL classification failed. Check the endpoint in “SQL Organizer: Configure” and run Scan again.',
+      const failedItems = inventory.filter((item) => item.classificationStatus === 'analysis-error');
+      const oversizedItems = inventory.filter((item) => item.warnings.includes('file-too-large'));
+      if (!failedItems.length && oversizedItems.length === inventory.length) {
+        const choice = await vscode.window.showErrorMessage(
+          `No plan was created because all ${inventory.length} SQL file${inventory.length === 1 ? '' : 's'} exceed the configured maximum file size. Increase root.maxFileBytes in sql-organizer.config.yml, then scan again.`,
+          'Open Configuration',
+        );
+        if (choice === 'Open Configuration') await vscode.commands.executeCommand('sqlOrganizer.openConfig');
+        return false;
+      }
+      const firstError = failedItems[0]?.classificationError?.message ?? 'Unknown provider error.';
+      logger.error(
+        `No plan was created because every SQL classification failed. ${failedItems
+          .map((item) => `${item.relativePath}: ${item.classificationError?.message ?? 'Unknown provider error.'}`)
+          .join('; ')}`,
       );
+      const choice = await vscode.window.showErrorMessage(
+        `No plan was created because every SQL classification failed. First error: ${firstError}`,
+        'Open Output',
+        'Configure LLM',
+      );
+      if (choice === 'Open Output') logger.show();
+      if (choice === 'Configure LLM') await vscode.commands.executeCommand('sqlOrganizer.configure');
       return false;
     }
     await repo.savePlan(plan);
@@ -289,6 +309,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const plan = await repo.plan();
       if (!plan) return void vscode.window.showWarningMessage('Create a plan before applying it.');
       const approved = plan.actions.filter((x) => x.status === 'approved' && !x.validationErrors.length);
+      if (!approved.length)
+        return void vscode.window.showWarningMessage(
+          'No moves are approved yet. Open Review, approve individual rows or use "Approve all valid moves", then apply.',
+        );
       const confirmation = await vscode.window.showWarningMessage(
         `Apply ${approved.length} file moves? No files will be deleted. A manifest will be generated.`,
         { modal: true },

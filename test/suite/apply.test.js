@@ -110,4 +110,31 @@ suite('SQL Organizer Apply integration', () => {
     );
     assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
   });
+
+  test('allows Apply when only SQL Organizer generated files are uncommitted', async () => {
+    const text = 'SELECT 1;';
+    const source = vscode.Uri.joinPath(root, 'inbox', 'source.sql');
+    await vscode.workspace.fs.writeFile(source, Buffer.from(text));
+    await exec('git', ['init'], { cwd: folder });
+    await exec('git', ['config', 'user.email', 'test@example.invalid'], { cwd: folder });
+    await exec('git', ['config', 'user.name', 'SQL Organizer Test'], { cwd: folder });
+    await exec('git', ['add', '.'], { cwd: folder });
+    await exec('git', ['commit', '-m', 'fixture'], { cwd: folder });
+    await fs.mkdir(path.join(folder, '.sql-organizer'), { recursive: true });
+    await fs.writeFile(path.join(folder, '.sql-organizer', 'plan.json'), '{}');
+    await fs.writeFile(path.join(folder, 'SQL-ORGANIZER-REPORT.md'), '# Generated report\n');
+    await fs.writeFile(path.join(folder, 'INDEX.md'), '# Generated index\n');
+    const guarded = JSON.parse(JSON.stringify(config));
+    guarded.safety.requireCleanGitForApply = true;
+    const plan = makePlan(source, text);
+    plan.configHash = sha256(JSON.stringify(guarded));
+    const manifest = await new PlanApplier(root, guarded, new Repository(root, guarded)).apply(plan);
+    assert.equal(manifest.result, 'success');
+    assert.equal(
+      Buffer.from(
+        await vscode.workspace.fs.readFile(vscode.Uri.joinPath(root, 'customer', 'query', 'find-user.sql')),
+      ).toString(),
+      text,
+    );
+  });
 });

@@ -6,9 +6,22 @@ export interface GitState {
   isRepository: boolean;
   wasClean: boolean;
 }
-export async function checkGit(root: vscode.Uri, requireRepository: boolean, requireClean: boolean): Promise<GitState> {
+export async function checkGit(
+  root: vscode.Uri,
+  requireRepository: boolean,
+  requireClean: boolean,
+  ignoredGeneratedPaths: string[] = [],
+): Promise<GitState> {
   try {
-    const { stdout } = await exec('git', ['status', '--porcelain'], { cwd: root.fsPath, timeout: 5000 });
+    const ignoredPathspecs = ignoredGeneratedPaths
+      .map((value) => value.replaceAll('\\', '/').replace(/^\/+/, '').replace(/^\.\//, ''))
+      .filter(Boolean)
+      .map((value) => `:(exclude,top)${value}`);
+    const { stdout } = await exec(
+      'git',
+      ['status', '--porcelain', '--untracked-files=all', '--', '.', ...ignoredPathspecs],
+      { cwd: root.fsPath, timeout: 5000 },
+    );
     const state = { isRepository: true, wasClean: stdout.trim().length === 0 };
     if (requireClean && !state.wasClean)
       throw new Error('Git working tree is dirty; Apply is blocked by configuration.');

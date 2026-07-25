@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { classificationSchema, normalizeClassificationResponse } from '../../src/ai/responseValidator';
 import { retryableAiError, safeAiErrorMessage } from '../../src/ai/classificationRecovery';
+import { bindClassificationToItem } from '../../src/ai/classificationCache';
 describe('classification schema', () =>
   it('rejects unsafe filenames and invalid responses', () => {
     expect(() =>
@@ -61,5 +62,34 @@ describe('classification response normalization', () => {
     expect(normalized.suggestedFilename).toBe('grant-reporting-access.sql');
     expect(normalized.confidence).toBe(0.85);
     expect(normalized.riskReasons[0]).toContain('unsupported risk value');
+  });
+});
+
+describe('classification cache relocation', () => {
+  it('rebinds a content-cached classification when its workspace path changes', () => {
+    const records = [
+      {
+        itemId: 'old-absolute-path-id',
+        cacheKey: 'same-sql-content',
+        analyzedAt: '2026-07-25T00:00:00.000Z',
+        classification: {
+          category: 'customer',
+          operation: 'SELECT' as const,
+          dialect: 'generic' as const,
+          purpose: 'Find customer',
+          suggestedFilename: 'find-customer.sql',
+          tables: ['customers'],
+          parameters: [],
+          risk: 'read-only' as const,
+          riskReasons: [],
+          confidence: 0.9,
+          reviewNotes: [],
+        },
+      },
+    ];
+    bindClassificationToItem(records, records[0], 'new-absolute-path-id');
+    expect(records.find((record) => record.itemId === 'new-absolute-path-id')?.classification.purpose).toBe(
+      'Find customer',
+    );
   });
 });

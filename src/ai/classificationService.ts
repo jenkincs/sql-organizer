@@ -7,6 +7,7 @@ import { Repository } from '../storage/repository';
 import { AiProvider } from './aiProvider';
 import { retryableAiError, safeAiErrorMessage } from './classificationRecovery';
 import { classificationSchema } from './responseValidator';
+import { bindClassificationToItem } from './classificationCache';
 
 export interface ClassificationProgress {
   completed: number;
@@ -24,6 +25,10 @@ export interface ClassificationSummary {
   cancelled: boolean;
 }
 
+/**
+ * Cached classifications are keyed by SQL content, not location. When a user moves a
+ * workspace, bind the cached result to the newly scanned item ID so planning uses it.
+ */
 export class ClassificationService {
   constructor(
     private readonly root: vscode.Uri,
@@ -58,9 +63,13 @@ export class ClassificationService {
     };
     const classify = async (item: SqlInventoryItem): Promise<'cached' | 'analyzed' | 'failed'> => {
       const key = sha256(`${item.rawHash}|v1|${JSON.stringify(this.config.taxonomy.categories)}|${this.model}`);
-      if (cache.has(key)) {
+      const cachedRecord = cache.get(key);
+      if (cachedRecord) {
+        const rebound = bindClassificationToItem(records, cachedRecord, item.id);
+        cache.set(key, rebound);
         item.classificationStatus = 'analyzed';
         delete item.classificationError;
+        await persist();
         return 'cached';
       }
       try {
@@ -96,7 +105,9 @@ export class ClassificationService {
           classification,
           analyzedAt: new Date().toISOString(),
         };
-        records.push(record);
+        const existingIndex = records.findIndex((existing) => existing.itemId === item.id);
+        if (existingIndex >= 0) records[existingIndex] = record;
+        else records.push(record);
         cache.set(key, record);
         item.classificationStatus = 'analyzed';
         delete item.classificationError;
