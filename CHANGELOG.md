@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.4
+
+- Create the default configuration file before opening it in a new workspace.
+
 ## 0.1.3
 
 - Added an in-extension LLM Configuration Webview with endpoint, protocol, model, API key, and connection-test controls.
