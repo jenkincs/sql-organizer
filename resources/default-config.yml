@@ -10,6 +10,13 @@ classification:
   enableAutoApprove: false
   unknownCategory: unknown
   unclassifiedFolder: unclassified
+ai:
+  provider: openai
+  model: ""
+  # Optional. Example: https://api.openai.com/v1 or http://localhost:11434/v1
+  baseUrl: ""
+  # "responses" for OpenAI Responses API; "chat-completions" for compatible endpoints.
+  apiProtocol: responses
 safety:
   dryRunByDefault: true
   requireGitRepository: false
