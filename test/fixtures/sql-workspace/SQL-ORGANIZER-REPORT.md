@@ -2,7 +2,8 @@
 
 ## Scan Summary
 
-- Files scanned: 1
+- Source files scanned: 1
+- SQL units scanned: 1
 - Classified: 1
 - Exact duplicates: 0
 - Similar candidates: 0
