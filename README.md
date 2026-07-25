@@ -4,16 +4,16 @@ Local-first VS Code extension for scanning, classifying and safely organizing SQ
 
 ## Workflow
 
-1. Run **SQL Organizer: Initialize**.
-2. Run **SQL Organizer: Configure**. Add one or more global endpoint profiles, choose a protocol, add its models, and save the API key. Profiles and keys are reusable across workspaces; project organization rules remain in `sql-organizer.config.yml`.
-3. Run **Analyze** and **Create Plan**.
-4. Review, edit, approve or reject each move in the Review panel.
-5. Run **Apply Approved Plan** and use **Roll Back Last Apply** if safe preconditions still hold.
+1. Run **SQL Organizer: Configure**. Add an endpoint profile, choose its protocol and model, and save the API key.
+2. Run **SQL Organizer: Scan and Create Plan**. It scans locally, classifies SQL, generates a dry-run plan, and opens Review automatically.
+3. Review, edit, and approve the proposed actions, then choose **Apply approved plan**. Use **Roll Back Last Apply** if safe preconditions still hold.
+
+`SQL Organizer: Initialize` is optional. Use it only when you want to create and edit a project-specific `sql-organizer.config.yml`; Scan uses safe defaults and creates its internal state automatically.
 
 ## Install
 
 ```bash
-code --install-extension sql-organizer-0.1.5.vsix
+code --install-extension sql-organizer-0.1.6.vsix
 ```
 
 See the [User Guide](docs/USER-GUIDE.md) for installation, endpoint configuration, review, Apply, and rollback instructions.

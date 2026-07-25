@@ -3,10 +3,10 @@
 ## Scan Summary
 
 - Files scanned: 1
-- Classified: 0
+- Classified: 1
 - Exact duplicates: 0
 - Similar candidates: 0
-- Proposed moves: 0
+- Proposed moves: 1
 
 ## Safety
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.6
+
+- Simplified the primary workflow to Configure → Scan and Create Plan → Review and Apply.
+- Made Scan perform local scanning, AI classification, plan generation, reporting, and Review opening in one command.
+- Kept Analyze and Create Plan available as advanced recovery commands.
+- Kept Initialize optional; Scan now works with safe defaults and creates internal state automatically.
+
 ## 0.1.5
 
 - Added global multi-endpoint profiles, per-endpoint SecretStorage keys, model selection, and connection testing in the configuration Webview.

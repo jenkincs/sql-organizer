@@ -2,7 +2,7 @@
   "name": "sql-organizer",
   "displayName": "SQL Organizer",
   "description": "A safe, local-first SQL file knowledge-base organizer.",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "publisher": "sql-organizer",
   "license": "MIT",
@@ -60,15 +60,7 @@
       },
       {
         "command": "sqlOrganizer.scan",
-        "title": "SQL Organizer: Scan"
-      },
-      {
-        "command": "sqlOrganizer.analyze",
-        "title": "SQL Organizer: Analyze"
-      },
-      {
-        "command": "sqlOrganizer.createPlan",
-        "title": "SQL Organizer: Create Plan"
+        "title": "SQL Organizer: Scan and Create Plan"
       },
       {
         "command": "sqlOrganizer.openReview",
@@ -180,13 +172,13 @@
           },
           {
             "id": "scan",
-            "title": "Scan SQL files",
-            "description": "[Run a local scan](command:sqlOrganizer.scan)."
+            "title": "Scan and create a plan",
+            "description": "[Scan SQL files and open Review](command:sqlOrganizer.scan)."
           },
           {
             "id": "review",
             "title": "Review before applying",
-            "description": "[Open Review](command:sqlOrganizer.openReview); no file is moved until explicit approval."
+            "description": "Review the plan opened by Scan, then approve only the safe actions you want to apply."
           }
         ]
       }

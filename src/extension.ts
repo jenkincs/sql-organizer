@@ -61,6 +61,94 @@ export function activate(context: vscode.ExtensionContext): void {
     library.refresh();
     issues.refresh();
   };
+  const analyzeInventory = async (
+    folder: vscode.Uri,
+    config: Awaited<ReturnType<typeof loadConfig>>,
+    repo: Repository,
+    token?: vscode.CancellationToken,
+  ): Promise<boolean> => {
+    const store = new LlmSettingsStore(context.globalStorageUri);
+    const settings = await store.get(config);
+    const profile =
+      settings.profiles.length > 1
+        ? (
+            await vscode.window.showQuickPick(
+              settings.profiles.map((item) => ({ label: item.name, description: item.baseUrl, item })),
+              {
+                title: 'SQL Organizer: Select AI endpoint',
+                placeHolder: 'Select an endpoint profile',
+                matchOnDescription: true,
+              },
+            )
+          )?.item
+        : store.active(settings);
+    if (!profile) return false;
+    const key =
+      (await context.secrets.get(profileSecretKey(profile.id))) ??
+      (await context.secrets.get('sqlOrganizer.openaiApiKey'));
+    if (!key) {
+      vscode.window.showErrorMessage(
+        'No API key is configured. Run “SQL Organizer: Configure”, save an API key, then run Scan again.',
+      );
+      return false;
+    }
+    const model =
+      profile.models.length > 1
+        ? await vscode.window.showQuickPick(profile.models, {
+            title: 'SQL Organizer: Select AI model',
+            placeHolder: 'Select a model for this scan',
+          })
+        : profile.models[0];
+    if (!model) {
+      vscode.window.showErrorMessage(
+        'No model is configured. Run “SQL Organizer: Configure”, add a model, then run Scan again.',
+      );
+      return false;
+    }
+    const provider = new OpenAiProvider({
+      apiKey: key,
+      model,
+      baseUrl: profile.baseUrl,
+      protocol: profile.apiProtocol,
+      timeoutMs: config.ai.timeoutMs,
+    });
+    await new ClassificationService(folder, config, repo, provider, `${profile.id}:${model}`).analyze(
+      await repo.inventory(),
+      token,
+    );
+    return !token?.isCancellationRequested;
+  };
+  const createReviewPlan = async (
+    folder: vscode.Uri,
+    config: Awaited<ReturnType<typeof loadConfig>>,
+    repo: Repository,
+  ): Promise<boolean> => {
+    const inventory = await repo.inventory();
+    const classifications = await repo.classifications();
+    const analyzedIds = new Set(
+      inventory.filter((item) => item.classificationStatus === 'analyzed').map((item) => item.id),
+    );
+    const currentClassifications = classifications.filter((record) => analyzedIds.has(record.itemId));
+    const plan = buildPlan(
+      folder.toString(),
+      sha256(JSON.stringify(config)),
+      config,
+      inventory,
+      currentClassifications,
+    );
+    if (inventory.length && !plan.actions.length) {
+      vscode.window.showErrorMessage(
+        'No plan was created because every SQL classification failed. Check the endpoint in “SQL Organizer: Configure” and run Scan again.',
+      );
+      return false;
+    }
+    await repo.savePlan(plan);
+    await writeReports(folder, config, inventory, currentClassifications, plan);
+    status.text = '$(database) SQL Organizer: Plan Ready';
+    refresh();
+    await vscode.commands.executeCommand('sqlOrganizer.openReview');
+    return true;
+  };
   logger.setLevel(vscode.workspace.getConfiguration('sqlOrganizer').get('logLevel', 'info'));
   logger.info('SQL Organizer activated.');
   context.subscriptions.push(
@@ -132,59 +220,15 @@ export function activate(context: vscode.ExtensionContext): void {
       const folder = root();
       if (!folder) return void vscode.window.showErrorMessage('Open a workspace folder before analyzing SQL files.');
       const config = await loadConfig(folder);
-      const store = new LlmSettingsStore(context.globalStorageUri);
-      const settings = await store.get(config);
-      const profile =
-        settings.profiles.length > 1
-          ? (
-              await vscode.window.showQuickPick(
-                settings.profiles.map((item) => ({ label: item.name, description: item.baseUrl, item })),
-                {
-                  title: 'SQL Organizer: Select AI endpoint',
-                  placeHolder: 'Select an endpoint profile',
-                  matchOnDescription: true,
-                },
-              )
-            )?.item
-          : store.active(settings);
-      if (!profile) return;
-      const key =
-        (await context.secrets.get(profileSecretKey(profile.id))) ??
-        (await context.secrets.get('sqlOrganizer.openaiApiKey'));
-      if (!key)
-        return void vscode.window.showErrorMessage(
-          'No API key is configured for this endpoint. Run “SQL Organizer: Configure” and save one.',
-        );
-      const model =
-        profile.models.length > 1
-          ? await vscode.window.showQuickPick(profile.models, {
-              title: 'SQL Organizer: Select AI model',
-              placeHolder: 'Select a model for this analysis run',
-            })
-          : profile.models[0];
-      if (!model)
-        return void vscode.window.showErrorMessage(
-          'No model is configured for this endpoint. Run “SQL Organizer: Configure” and add one.',
-        );
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: `SQL Organizer: Analyzing SQL files with ${model}`,
+          title: 'SQL Organizer: Analyzing SQL files',
           cancellable: true,
         },
         async (_, token) => {
           const repo = new Repository(folder, config);
-          const provider = new OpenAiProvider({
-            apiKey: key,
-            model,
-            baseUrl: profile.baseUrl,
-            protocol: profile.apiProtocol,
-            timeoutMs: config.ai.timeoutMs,
-          });
-          await new ClassificationService(folder, config, repo, provider, `${profile.id}:${model}`).analyze(
-            await repo.inventory(),
-            token,
-          );
+          if (!(await analyzeInventory(folder, config, repo, token))) return;
           status.text = '$(database) SQL Organizer: Analysis complete';
           refresh();
         },
@@ -197,19 +241,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!folder) return void vscode.window.showErrorMessage('Open a workspace folder before creating a plan.');
       const config = await loadConfig(folder);
       const repo = new Repository(folder, config);
-      const inventory = await repo.inventory();
-      const plan = buildPlan(
-        folder.toString(),
-        sha256(JSON.stringify(config)),
-        config,
-        inventory,
-        await repo.classifications(),
-      );
-      await repo.savePlan(plan);
-      await writeReports(folder, config, inventory, await repo.classifications(), plan);
-      status.text = '$(database) SQL Organizer: Plan Ready';
-      refresh();
-      await vscode.commands.executeCommand('sqlOrganizer.openReview');
+      await createReviewPlan(folder, config, repo);
     }),
   );
   context.subscriptions.push(
@@ -362,18 +394,30 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
-          title: 'SQL Organizer: Scanning SQL files',
+          title: 'SQL Organizer: Scan and create plan',
           cancellable: true,
         },
-        async (_, token) => {
+        async (progress, token) => {
           status.text = '$(sync~spin) SQL Organizer: Scanning';
           const config = await loadConfig(folder);
+          progress.report({ message: 'Scanning SQL files…', increment: 20 });
           const items = await scanWorkspace(folder, config, token);
-          await new Repository(folder, config).saveInventory(items);
+          const repo = new Repository(folder, config);
+          await repo.saveInventory(items);
           logger.info(`Scanned ${items.length} SQL file(s).`);
-          status.text = `$(database) SQL Organizer: ${items.filter((x) => x.classificationStatus !== 'analyzed').length} pending`;
           refresh();
-          vscode.window.showInformationMessage(`SQL Organizer scanned ${items.length} SQL file(s).`);
+          if (token.isCancellationRequested) return;
+          if (!items.length) {
+            status.text = '$(database) SQL Organizer: No SQL files found';
+            return void vscode.window.showInformationMessage('SQL Organizer found no SQL files to organize.');
+          }
+          progress.report({ message: 'Classifying SQL files…', increment: 55 });
+          if (!(await analyzeInventory(folder, config, repo, token))) {
+            status.text = `$(database) SQL Organizer: ${items.length} scanned`;
+            return;
+          }
+          progress.report({ message: 'Creating review plan…', increment: 25 });
+          await createReviewPlan(folder, config, repo);
         },
       );
     }),

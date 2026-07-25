@@ -28,7 +28,7 @@ export class OrganizerTreeProvider implements vscode.TreeDataProvider<vscode.Tre
         item(
           'Pending Analysis',
           inventory.filter((x) => x.classificationStatus !== 'analyzed').length,
-          'sqlOrganizer.analyze',
+          'sqlOrganizer.scan',
         ),
         item('Classified', classifications.length, 'sqlOrganizer.openReview'),
         item(
@@ -70,7 +70,7 @@ export class OrganizerTreeProvider implements vscode.TreeDataProvider<vscode.Tre
       item(
         'Analysis Errors',
         inventory.filter((x) => x.classificationStatus === 'analysis-error').length,
-        'sqlOrganizer.analyze',
+        'sqlOrganizer.scan',
       ),
     ];
   }

@@ -1,3 +1,3 @@
 # SQL Index
 
-- **query.sql** — Not analyzed; SELECT; generic; tables: app_users; confidence: n/a
+- **query.sql** — Find a user; SELECT; generic; tables: app_users; confidence: 0.9
