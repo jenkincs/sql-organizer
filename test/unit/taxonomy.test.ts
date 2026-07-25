@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildTaxonomyState, proposeCategory, taxonomyPromptContext } from '../../src/taxonomy/taxonomyService';
+import {
+  buildTaxonomyState,
+  proposeCategory,
+  resolveModuleCategory,
+  taxonomyPromptContext,
+} from '../../src/taxonomy/taxonomyService';
 import { ClassificationRecord, OrganizerPlan, SqlInventoryItem } from '../../src/domain/models';
 
 describe('adaptive taxonomy', () => {
@@ -27,5 +32,28 @@ describe('adaptive taxonomy', () => {
     const state = { version: 1 as const, entries: [], updatedAt: 'now' };
     expect(proposeCategory('Audit Logs', 'No current category fits', state)?.slug).toBe('audit-logs');
     expect(proposeCategory('unknown', 'fallback', state)).toBeUndefined();
+  });
+  it('rejects filename-like model categories in favor of matching module tables', () => {
+    const resolved = resolveModuleCategory(
+      {
+        category: '03-create-booking-sql',
+        taxonomyDecision: 'existing',
+        relatedCategories: [],
+        reviewNotes: [],
+        operation: 'INSERT',
+        dialect: 'generic',
+        purpose: 'Create booking',
+        suggestedFilename: 'create-booking.sql',
+        tables: ['bookings'],
+        parameters: [],
+        risk: 'write',
+        riskReasons: [],
+        confidence: 0.8,
+      },
+      { tables: ['bookings'] },
+      ['booking', 'customer', 'unknown'],
+    );
+    expect(resolved.category).toBe('booking');
+    expect(resolved.taxonomyDecision).toBe('existing');
   });
 });

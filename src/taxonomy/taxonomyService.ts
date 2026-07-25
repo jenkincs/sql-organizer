@@ -5,9 +5,18 @@ import {
   TaxonomyEntry,
   TaxonomyProposal,
   TaxonomyState,
+  SqlClassification,
 } from '../domain/models';
 
 const ignoredTopLevelFolders = new Set(['.git', '.sql-organizer', 'archive', 'duplicates', 'inbox', 'node_modules']);
+
+function plausibleModule(slug: string): boolean {
+  return Boolean(slug) && !slug.endsWith('-sql') && !/^\d/.test(slug);
+}
+
+function singular(value: string): string {
+  return value.replace(/ies$/, 'y').replace(/s$/, '');
+}
 
 export function categorySlug(value: string): string {
   return (
@@ -52,9 +61,11 @@ export function buildTaxonomyState(
     const slug = categorySlug(category);
     mergeEntry(entries, { slug, label: categoryLabel(slug), source: 'configured', examples: [], createdAt: now });
   }
-  for (const entry of prior?.entries ?? []) mergeEntry(entries, entry);
+  for (const entry of prior?.entries ?? []) if (plausibleModule(entry.slug)) mergeEntry(entries, entry);
   for (const item of inventory) {
-    const topLevel = categorySlug(item.relativePath.split('/')[0] ?? '');
+    const parts = (item.sourceFileRelativePath ?? item.relativePath).split('/');
+    if (parts.length < 2) continue;
+    const topLevel = categorySlug(parts[0] ?? '');
     if (!topLevel || ignoredTopLevelFolders.has(topLevel)) continue;
     mergeEntry(entries, {
       slug: topLevel,
@@ -74,6 +85,7 @@ export function buildTaxonomyState(
     const item = byId.get(record.itemId);
     if (!item || (!applied.has(item.id) && item.relativePath.startsWith('inbox/'))) continue;
     const slug = categorySlug(record.classification.category);
+    if (!plausibleModule(slug)) continue;
     mergeEntry(entries, {
       slug,
       label: categoryLabel(slug),
@@ -92,6 +104,29 @@ export function buildTaxonomyState(
     version: 1,
     entries: [...entries.values()].sort((left, right) => left.slug.localeCompare(right.slug)),
     updatedAt: now,
+  };
+}
+
+/** Prevents a model from turning a source filename into a module name. */
+export function resolveModuleCategory(
+  classification: SqlClassification,
+  item: Pick<SqlInventoryItem, 'tables'>,
+  knownCategories: string[],
+): SqlClassification {
+  const category = categorySlug(classification.category);
+  if (plausibleModule(category)) return { ...classification, category };
+  const known = knownCategories.filter((value) => plausibleModule(value) && value !== 'unknown');
+  const tableTokens = item.tables.map((table) => categorySlug(table.split('.').at(-1) ?? table));
+  const matched = known.find((candidate) => tableTokens.some((table) => singular(table) === singular(candidate)));
+  const fallback = matched ?? tableTokens.find(plausibleModule) ?? 'unknown';
+  return {
+    ...classification,
+    category: fallback,
+    taxonomyDecision: known.includes(fallback) ? 'existing' : fallback === 'unknown' ? 'unknown' : 'proposed',
+    reviewNotes: [
+      ...classification.reviewNotes,
+      `Normalized invalid filename-like category "${classification.category}" to "${fallback}".`,
+    ],
   };
 }
 

@@ -8,6 +8,7 @@ import { AiProvider } from './aiProvider';
 import { retryableAiError, safeAiErrorMessage } from './classificationRecovery';
 import { classificationSchema } from './responseValidator';
 import { bindClassificationToItem } from './classificationCache';
+import { resolveModuleCategory } from '../taxonomy/taxonomyService';
 
 export interface ClassificationTaxonomyContext {
   categories: string[];
@@ -84,18 +85,22 @@ export class ClassificationService {
         let finalError: unknown;
         for (let attempt = 0; attempt <= this.config.ai.maxRetries; attempt += 1) {
           try {
-            classification = classificationSchema.parse(
-              await this.provider.classify({
-                relativePath: item.relativePath,
-                sizeBytes: item.sizeBytes,
-                operation: item.operation,
-                dialectHint: item.dialectHint,
-                tables: item.tables,
-                parameters: item.parameters,
-                redactedSql: redactSql(sql).slice(0, this.config.ai.maxSqlChars),
-                categories: this.taxonomy.categories,
-                taxonomyExamples: this.taxonomy.examples,
-              }),
+            classification = resolveModuleCategory(
+              classificationSchema.parse(
+                await this.provider.classify({
+                  relativePath: item.relativePath,
+                  sizeBytes: item.sizeBytes,
+                  operation: item.operation,
+                  dialectHint: item.dialectHint,
+                  tables: item.tables,
+                  parameters: item.parameters,
+                  redactedSql: redactSql(sql).slice(0, this.config.ai.maxSqlChars),
+                  categories: this.taxonomy.categories,
+                  taxonomyExamples: this.taxonomy.examples,
+                }),
+              ),
+              item,
+              this.taxonomy.categories,
             );
             break;
           } catch (error) {
