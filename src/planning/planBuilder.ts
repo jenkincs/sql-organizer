@@ -22,6 +22,11 @@ export function buildPlan(
   const byId = new Map(records.map((x) => [x.itemId, x.classification]));
   const destinations = new Set<string>();
   const taxonomyProposals = new Map<string, NonNullable<OrganizerPlan['taxonomyProposals']>[number]>();
+  const sourceUnitCounts = new Map<string, number>();
+  for (const item of items) {
+    const source = item.sourceFileUri ?? item.uri;
+    sourceUnitCounts.set(source, (sourceUnitCounts.get(source) ?? 0) + 1);
+  }
   const alreadyOrganized = new Set(
     (moduleIndex?.entries ?? []).map((entry) => `${entry.rawHash}\u0000${entry.destination}`),
   );
@@ -91,7 +96,8 @@ export function buildPlan(
         sourceStartLine: item.startLine,
         sourceEndLine: item.endLine,
         sourceStatementIndex: item.unitKind === 'statement' ? item.statementIndex : undefined,
-        archiveSource: item.unitKind === 'statement' && config.splitting.archiveOriginalAfterSplit,
+        sourceUnitCount: sourceUnitCounts.get(item.sourceFileUri ?? item.uri) ?? 1,
+        archiveSource: config.splitting.archiveOriginalAfterSplit,
         taxonomyProposal: proposal,
       };
     });
@@ -106,7 +112,7 @@ export function buildPlan(
     similarityCandidates: findSimilarities(items, config.duplicates.candidateThreshold),
     warnings: [
       'Plan is a dry run. Similar SQL is never moved or merged automatically.',
-      'Statement extraction never deletes the original source unless an approved archive action is enabled.',
+      'Fully organized source files are archived, never deleted, only after every SQL unit is approved and appended.',
     ],
     status: 'reviewing',
     taxonomyProposals: [...taxonomyProposals.values()],

@@ -11,7 +11,9 @@ taxonomy:
   categories: [customer, booking, invoice, access, login, reporting, operations, system, unknown]
 splitting:
   enabled: true
-  archiveOriginalAfterSplit: false
+  # Moves a fully organized source file to archive/organized after Apply.
+  # It is never deleted, and Roll Back Last Apply restores it.
+  archiveOriginalAfterSplit: true
   maxStatementsPerFile: 200
   keepProceduralBlocksTogether: true
 organization:

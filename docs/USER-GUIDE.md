@@ -20,7 +20,7 @@ Run **SQL Organizer: Configure**, then use **SQL Organizer: Scan and Create Plan
 
 5. Review every proposed action. The Review panel groups additions by generated module file, shows each unit's source range, primary and related categories, risk, and new-category proposals, and lets you reassign an item to a business module before approval. A query that joins several tables remains one unit; only independent statements are separated.
 
-6. Select **Apply approved plan** in the Review panel. VS Code asks for a second confirmation. Only approved, conflict-free actions are appended to their module files after source-hash, statement-boundary, destination, path, symlink, size, collision, and Git-safety checks. Source files remain intact unless project rules enable archival. A manifest is created for auditing and rollback.
+6. Select **Apply approved plan** in the Review panel. VS Code asks for a second confirmation. Only approved, conflict-free actions are appended to their module files after source-hash, statement-boundary, destination, path, symlink, size, collision, and Git-safety checks. When every SQL unit from a source file is approved and appended, the original is moved to `archive/organized/`; it is never deleted, and Roll Back Last Apply restores it. A manifest is created for auditing and rollback.
 
 7. If the latest Apply must be undone, run **SQL Organizer: Roll Back Last Apply**. Rollback refuses to overwrite or replace files that changed after Apply.
 
@@ -44,7 +44,7 @@ Independent statements in a mixed SQL file can be organized separately. Procedur
 
 ## Module files
 
-The default output model is one file per business module, under `modules/`: for example, customer-related SQL is appended to `modules/customer.sql` and booking-related SQL to `modules/booking.sql`. CRUD, DDL, and other SQL for the same business module share that module file. SQL Organizer uses stable section markers and per-unit provenance comments to keep these files readable and prevent re-adding the same content. Generated module files are excluded from the next scan and from the clean-Git Apply guard; other uncommitted work still blocks Apply when Git safety is enabled. The source inbox files remain unchanged unless you explicitly enable archival.
+The default output model is one file per business module, under `modules/`: for example, customer-related SQL is appended to `modules/customer.sql` and booking-related SQL to `modules/booking.sql`. CRUD, DDL, and other SQL for the same business module share that module file. SQL Organizer uses stable section markers and per-unit provenance comments to keep these files readable and prevent re-adding the same content. After a complete source file is organized, it is moved to `archive/organized/`, leaving the inbox available for new SQL. Generated module files are excluded from the next scan and from the clean-Git Apply guard; other uncommitted work still blocks Apply when Git safety is enabled.
 
 For a query that joins several modules, SQL Organizer chooses one **primary module** based on the query's business intent and keeps the other modules as related-category tags. For example, a booking search joined to customer data belongs in `booking.sql`; a cross-module aggregate belongs in `reporting.sql`; a query with no clear owner should use an explicit `integration` or `shared` module. The same query is never copied into multiple module files.
 

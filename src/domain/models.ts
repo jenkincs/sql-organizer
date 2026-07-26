@@ -115,6 +115,8 @@ export interface PlanAction {
   sourceStartLine?: number;
   sourceEndLine?: number;
   sourceStatementIndex?: number;
+  /** Total SQL units originating from this source file, used to archive only complete sources. */
+  sourceUnitCount?: number;
   content?: string;
   archiveSource?: boolean;
   taxonomyProposal?: TaxonomyProposal;

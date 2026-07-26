@@ -129,6 +129,30 @@ suite('SQL Organizer Apply integration', () => {
     await vscode.workspace.fs.writeFile(source, Buffer.from(second));
   });
 
+  test('archives a complete organized source and restores it on rollback', async () => {
+    const text = 'SELECT * FROM bookings WHERE booking_id = :booking_id;';
+    const source = vscode.Uri.joinPath(root, 'inbox', 'booking.sql');
+    await vscode.workspace.fs.writeFile(source, Buffer.from(text));
+    const plan = makePlan(source, text, 'modules/booking.sql');
+    Object.assign(plan.actions[0], {
+      kind: 'append',
+      sourceRelativePath: 'inbox/booking.sql',
+      sourceUnitId: 'booking-read',
+      sourceUnitRawHash: sha256(text),
+      archiveSource: true,
+      sourceUnitCount: 1,
+    });
+    assert.equal(plan.actions[0].archiveSource, true);
+    assert.equal(plan.actions[0].sourceUnitCount, 1);
+    const manifest = await new PlanApplier(root, config, new Repository(root, config)).apply(plan);
+    const archive = manifest.moves.find((move) => move.source === 'inbox/booking.sql');
+    assert.ok(archive);
+    assert.match(archive.destination, /^archive\/organized\//);
+    await assert.rejects(vscode.workspace.fs.stat(source));
+    await rollbackLast(root, manifest);
+    assert.equal(Buffer.from(await vscode.workspace.fs.readFile(source)).toString(), text);
+  });
+
   test('blocks Apply when Git requires a clean worktree', async () => {
     const text = 'SELECT 1;';
     const source = vscode.Uri.joinPath(root, 'inbox', 'source.sql');

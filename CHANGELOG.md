@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Changed the default Apply behavior to archive fully organized source files under `archive/organized/`, with manifest-backed rollback.
 - Added durable per-unit module indexing so future scans skip SQL that is already appended, including after a workspace relocation.
 - Grouped Review by generated module file and added a safe module reassignment control.
 - Excluded generated module files from the optional clean-Git Apply guard while preserving protection for user changes.

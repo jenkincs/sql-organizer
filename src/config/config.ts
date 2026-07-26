@@ -71,7 +71,8 @@ const configSchema = z.object({
   splitting: z
     .object({
       enabled: z.boolean().default(true),
-      archiveOriginalAfterSplit: z.boolean().default(false),
+      // Archive only after every unit from a source has safely reached a destination.
+      archiveOriginalAfterSplit: z.boolean().default(true),
       maxStatementsPerFile: z.number().int().positive().max(1000).default(200),
       keepProceduralBlocksTogether: z.literal(true).default(true),
     })

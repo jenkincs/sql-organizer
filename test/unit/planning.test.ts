@@ -132,4 +132,54 @@ describe('adaptive unit planning', () => {
     expect(plan.actions).toHaveLength(0);
     expect(plan.skippedAlreadyOrganized).toBe(1);
   });
+
+  it('marks complete source files for archival when archival is enabled', () => {
+    const item: SqlInventoryItem = {
+      id: 'source-unit',
+      uri: 'file:///workspace/inbox/booking.sql',
+      relativePath: 'inbox/booking.sql',
+      rawHash: 'unit',
+      normalizedHash: 'unit',
+      normalizedTokens: [],
+      sizeBytes: 1,
+      modifiedAt: 1,
+      operation: 'SELECT',
+      dialectHint: 'generic',
+      tables: ['bookings'],
+      parameters: [],
+      warnings: [],
+      classificationStatus: 'analyzed',
+      unitKind: 'file',
+    };
+    const archivalConfig = { ...config, splitting: { archiveOriginalAfterSplit: true } } as OrganizerConfig;
+    const plan = buildPlan(
+      'file:///workspace',
+      'config',
+      archivalConfig,
+      [item],
+      [
+        {
+          itemId: item.id,
+          cacheKey: 'key',
+          analyzedAt: 'now',
+          classification: {
+            category: 'booking',
+            taxonomyDecision: 'existing',
+            operation: 'SELECT',
+            dialect: 'generic',
+            purpose: 'Find bookings',
+            suggestedFilename: 'find-bookings.sql',
+            tables: ['bookings'],
+            parameters: [],
+            risk: 'read-only',
+            riskReasons: [],
+            confidence: 0.99,
+            reviewNotes: [],
+          },
+        },
+      ],
+    );
+    expect(plan.actions[0].archiveSource).toBe(true);
+    expect(plan.actions[0].sourceUnitCount).toBe(1);
+  });
 });

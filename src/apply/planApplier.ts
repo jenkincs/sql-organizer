@@ -201,8 +201,13 @@ export class PlanApplier {
     const approvedSources = new Set(actions.filter((action) => action.archiveSource).map((action) => action.sourceUri));
     return [...approvedSources].flatMap((sourceUri) => {
       const sourceActions = plan.actions.filter((action) => action.sourceUri === sourceUri);
+      // Legacy plans created before sourceUnitCount can only archive the units
+      // they explicitly marked for archival. New plans always provide the exact
+      // count, which prevents incomplete/failed sources from moving.
+      const expectedUnits = sourceActions[0]?.sourceUnitCount ?? sourceActions.length;
       if (
         !sourceActions.length ||
+        sourceActions.length !== expectedUnits ||
         !sourceActions.every((action) => action.kind === 'append' && action.status === 'approved')
       )
         return [];
@@ -213,7 +218,7 @@ export class PlanApplier {
           source: vscode.Uri.parse(sourceUri),
           relativePath: action.sourceRelativePath,
           rawHash: action.sourceRawHash,
-          destination: `archive/mixed/${sha256(sourceUri).slice(0, 12)}-${filename}`,
+          destination: `archive/organized/${sha256(sourceUri).slice(0, 12)}-${filename}`,
         },
       ];
     });
